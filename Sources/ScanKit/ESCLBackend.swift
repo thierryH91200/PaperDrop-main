@@ -109,6 +109,12 @@ public final class ESCLBackend: NSObject, ScannerBackend, URLSessionDelegate, @u
         defer { setCurrentJob(nil) }
 
         let data = try await fetchDocument(job: job)
+        // Close the job so the scanner returns to Idle: eSCL expects a
+        // trailing NextDocument (which now 404s for a single flatbed page).
+        // Skipping this leaves the device "Processing", and the next scan
+        // gets 503 Busy — i.e. page 1 works but page 2 fails.
+        await closeJob(job)
+
         let out = directory.appendingPathComponent(
             "escl-\(Int(Date().timeIntervalSince1970)).jpg"
         )
@@ -195,6 +201,12 @@ public final class ESCLBackend: NSObject, ScannerBackend, URLSessionDelegate, @u
             throw ScanError.scanFailed("scanner returned HTTP \(http.statusCode) for the page")
         }
         return data
+    }
+
+    /// Drain the job with a final NextDocument (expected 404) so the scanner
+    /// finishes it and frees itself for the next scan. Best-effort.
+    private func closeJob(_ job: URL) async {
+        _ = try? await session.data(from: job.appendingPathComponent("NextDocument"))
     }
 
     // MARK: - Helpers
