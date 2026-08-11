@@ -1,0 +1,51 @@
+name: CI
+
+# Lint + tests + unsigned smoke bundle on every push/PR. Tagged releases
+# are handled by release.yml — skip this on tags to avoid wasted CI minutes.
+
+on:
+  push:
+    branches: [main]
+    tags-ignore: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  ci:
+    name: Lint, test, smoke build
+    runs-on: macos-15
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Cache Homebrew downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/Homebrew
+          key: brew-sane-${{ runner.os }}
+
+      - name: Install XcodeGen (generates PaperDrop.xcodeproj)
+        run: brew install xcodegen
+
+      - name: Install SANE (vendored into the bundle)
+        run: brew install sane-backends
+
+      - name: Lint
+        run: make lint
+
+      - name: Test
+        run: make test
+
+      - name: Smoke bundle (ad-hoc signed)
+        env:
+          CODESIGN_IDENTITY: "-"
+        run: ./bundle.sh
+
+      - name: Verify vendored SANE relocation
+        run: |
+          scripts/vendor-sane.sh --verify
+          test -x PaperDrop.app/Contents/Helpers/scanimage

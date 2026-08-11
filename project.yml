@@ -1,0 +1,125 @@
+# XcodeGen spec — source of truth for PaperDrop.xcodeproj.
+#
+#   brew install xcodegen        # one-time
+#   xcodegen generate            # regenerate PaperDrop.xcodeproj from this file
+#
+# The .xcodeproj is derived and git-ignored; edit THIS file, not the project
+# in Xcode's UI (UI changes to build settings are lost on regeneration).
+name: PaperDrop
+
+options:
+  bundleIdPrefix: com.bensquire
+  createIntermediateGroups: true
+  deploymentTarget:
+    macOS: "13.0"
+
+# Applied to every target; per-target blocks below override as needed.
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    # Ad-hoc by default so a plain `xcodebuild` works with no cert. CI/release
+    # override CODE_SIGN_IDENTITY with the Developer ID.
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "-"
+
+targets:
+  # Shared library: OCR, pipeline, PDF, SANE backend, USB reset. Linked into
+  # the app, the CLI, and the tests.
+  ScanKit:
+    type: library.static
+    platform: macOS
+    sources:
+      - Sources/ScanKit
+    settings:
+      base:
+        SKIP_INSTALL: "YES"
+
+  # The native macOS app.
+  PaperDrop:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/PaperDrop
+      # Classic .icns icon (CFBundleIconFile below), copied into Resources.
+      - path: icon/PaperDrop.icns
+        buildPhase: resources
+    dependencies:
+      - target: ScanKit
+      - sdk: IOKit.framework
+      - sdk: IOUSBHost.framework
+      - sdk: Vision.framework
+    settings:
+      base:
+        PRODUCT_NAME: PaperDrop
+        PRODUCT_BUNDLE_IDENTIFIER: com.bensquire.paperdrop
+        # Runs a bundled scanimage helper + touches IOKit/USB — must NOT be
+        # sandboxed. Hardened runtime is required for notarization.
+        ENABLE_APP_SANDBOX: "NO"
+        ENABLE_HARDENED_RUNTIME: "YES"
+        ENABLE_USER_SCRIPT_SANDBOXING: "NO"
+    info:
+      path: PaperDrop/Info.plist
+      properties:
+        CFBundleName: PaperDrop
+        CFBundleExecutable: PaperDrop
+        CFBundleIdentifier: com.bensquire.paperdrop
+        CFBundleIconFile: PaperDrop
+        CFBundlePackageType: APPL
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        LSMinimumSystemVersion: "13.0"
+        NSHighResolutionCapable: true
+        # Network scanners (e.g. Epson WF series) are reached over the local
+        # network via ImageCaptureCore. macOS 15+ gates this behind the Local
+        # Network privacy prompt; without this string the connection is denied
+        # silently ("Failed to open a connection to the device").
+        NSLocalNetworkUsageDescription:
+          PaperDrop connects to scanners on your local network to scan documents.
+        # Epson/network scanners advertise these Bonjour service types.
+        NSBonjourServices:
+          - _scanner._tcp
+          - _uscan._tcp
+          - _uscans._tcp
+          - _pdl-datastream._tcp
+    # Runs after compile/link, before Xcode's final CodeSign of the .app —
+    # same inside-out order as bundle.sh.
+    postBuildScripts:
+      - name: Embed & sign vendored SANE
+        script: '"$SRCROOT/scripts/xcode-embed-sane.sh"'
+        basedOnDependencyAnalysis: false
+
+  # Headless CLI (same ScanKit pipeline, no UI). Kept from the SwiftPM setup.
+  scantool:
+    type: tool
+    platform: macOS
+    sources:
+      - Sources/scantool
+    dependencies:
+      - target: ScanKit
+      - sdk: IOKit.framework
+      - sdk: IOUSBHost.framework
+      - sdk: Vision.framework
+
+  ScanKitTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests/ScanKitTests
+    dependencies:
+      - target: ScanKit
+      - sdk: IOKit.framework
+      - sdk: IOUSBHost.framework
+      - sdk: Vision.framework
+
+schemes:
+  PaperDrop:
+    build:
+      targets:
+        PaperDrop: all
+        scantool: all
+    run:
+      config: Debug
+    test:
+      targets:
+        - ScanKitTests

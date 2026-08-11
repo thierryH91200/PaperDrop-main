@@ -1,0 +1,189 @@
+name: Release
+
+# Cuts a signed + notarized DMG and publishes it as a GitHub Release.
+# Trigger: push a tag matching `v*` (e.g. `git tag v0.1.0 && git push --tags`).
+#
+# Required repository secrets:
+#   SIGNING_CERTIFICATE_P12_BASE64  Developer ID Application cert, p12, base64
+#   SIGNING_CERTIFICATE_PASSWORD    p12 password
+#   APPLE_TEAM_ID                   e.g. SZHK3JVH6J
+#   APPLE_API_KEY_BASE64            App Store Connect API key (.p8), base64
+#   APPLE_API_KEY_ID                key id
+#   APPLE_API_ISSUER_ID             issuer id
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version (without leading v). Defaults to current tag."
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build, sign, notarize, publish
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Resolve version
+        id: ver
+        run: |
+          if [[ -n "${{ inputs.version }}" ]]; then
+            VERSION="${{ inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#v}"
+          fi
+          NUMERIC_VERSION="${VERSION%%-*}"
+          IS_PRERELEASE=false
+          [[ "$VERSION" == *-* ]] && IS_PRERELEASE=true
+          echo "version=$VERSION"                 >> "$GITHUB_OUTPUT"
+          echo "numeric_version=$NUMERIC_VERSION" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$IS_PRERELEASE"        >> "$GITHUB_OUTPUT"
+
+      - name: Cache Homebrew downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/Homebrew
+          key: brew-sane-${{ runner.os }}
+
+      - name: Install XcodeGen (generates PaperDrop.xcodeproj)
+        run: brew install xcodegen
+
+      - name: Install SANE (vendored into the bundle)
+        run: brew install sane-backends
+
+      - name: Lint and test
+        run: |
+          make lint
+          make test
+
+      - name: Import Developer ID Application cert
+        env:
+          CERT_P12_BASE64: ${{ secrets.SIGNING_CERTIFICATE_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
+        run: |
+          # Isolated keychain so the cert dies with the runner.
+          KEYCHAIN_PWD=$(uuidgen)
+          KEYCHAIN_PATH="$RUNNER_TEMP/build.keychain-db"
+          CERT_PATH="$RUNNER_TEMP/cert.p12"
+          echo -n "$CERT_P12_BASE64" | base64 --decode > "$CERT_PATH"
+          security create-keychain -p "$KEYCHAIN_PWD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PWD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$CERT_PASSWORD" \
+            -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PWD" "$KEYCHAIN_PATH" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN_PATH" \
+            $(security list-keychains -d user | tr -d '"' | xargs)
+          rm -f "$CERT_PATH"
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+
+      - name: Build signed app
+        env:
+          VERSION: ${{ steps.ver.outputs.numeric_version }}
+          CODESIGN_IDENTITY: "Developer ID Application"
+        run: ./bundle.sh
+
+      - name: Stage notary credentials
+        env:
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
+        run: |
+          KEY_PATH="$RUNNER_TEMP/AuthKey.p8"
+          echo -n "$APPLE_API_KEY_BASE64" | base64 --decode > "$KEY_PATH"
+          echo "APPLE_API_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Notarize and staple .app
+        env:
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+        run: |
+          APP=PaperDrop.app
+          ditto -c -k --keepParent "$APP" "$RUNNER_TEMP/PaperDrop.zip"
+          xcrun notarytool submit "$RUNNER_TEMP/PaperDrop.zip" \
+            --key "$APPLE_API_KEY_PATH" --key-id "$APPLE_API_KEY_ID" \
+            --issuer "$APPLE_API_ISSUER_ID" --wait
+          xcrun stapler staple "$APP"
+
+      - name: Build, sign, notarize DMG
+        env:
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+        run: |
+          mkdir -p dist
+          DMG="dist/PaperDrop-${{ steps.ver.outputs.version }}.dmg"
+          scripts/make-dmg.sh PaperDrop.app "$DMG"
+          codesign --sign "Developer ID Application" --timestamp "$DMG"
+          xcrun notarytool submit "$DMG" \
+            --key "$APPLE_API_KEY_PATH" --key-id "$APPLE_API_KEY_ID" \
+            --issuer "$APPLE_API_ISSUER_ID" --wait
+          xcrun stapler staple "$DMG"
+
+      - name: Wipe transient secrets
+        if: always()
+        run: |
+          rm -f "$APPLE_API_KEY_PATH"
+          security delete-keychain "$KEYCHAIN_PATH" 2>/dev/null || true
+
+      - name: Generate release notes
+        run: |
+          PREV=$(git tag --sort=-creatordate | grep -v "^${GITHUB_REF_NAME}$" | head -1 || true)
+          {
+            echo "## PaperDrop ${{ steps.ver.outputs.version }}"
+            echo
+            if [[ -n "$PREV" ]]; then
+              echo "### Changes since $PREV"
+              git log --pretty='- %s' "$PREV..HEAD" -- ':!.github' | head -50
+            else
+              echo "First tagged release."
+            fi
+            echo
+            echo "### Install"
+            echo "1. Download the DMG below"
+            echo "2. Open it and drag PaperDrop into Applications"
+            echo "3. Launch — first launch is silent (notarized by Apple)"
+            echo
+            echo "---"
+            echo
+            echo "### Open-source components"
+            echo
+            SANE_VER=$(cat Vendor/sane/VERSION 2>/dev/null || echo "sane-backends")
+            echo "PaperDrop bundles **SANE** (\`$SANE_VER\`) — scanimage, libsane,"
+            echo "and all backends — so legacy USB scanners work with no other"
+            echo "installs. SANE is licensed under the **GPL v2** (backends carry"
+            echo "a linking exception); it runs as a separate helper process and"
+            echo "PaperDrop's own source remains MIT. License texts ship inside"
+            echo "the app (Contents/Resources/licenses) and upstream source is at"
+            echo "<https://gitlab.com/sane-project/backends>."
+          } > release_notes.md
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PRERELEASE_FLAG=""
+          [[ "${{ steps.ver.outputs.prerelease }}" == "true" ]] && PRERELEASE_FLAG="--prerelease"
+          gh release create "${GITHUB_REF_NAME}" \
+            "dist/PaperDrop-${{ steps.ver.outputs.version }}.dmg" \
+            --title "PaperDrop ${{ steps.ver.outputs.version }}" \
+            --notes-file release_notes.md \
+            $PRERELEASE_FLAG
+
+      - name: Upload artifact (for manual inspection)
+        uses: actions/upload-artifact@v4
+        with:
+          name: PaperDrop-${{ steps.ver.outputs.version }}-dmg
+          path: dist/PaperDrop-${{ steps.ver.outputs.version }}.dmg
+          retention-days: 14

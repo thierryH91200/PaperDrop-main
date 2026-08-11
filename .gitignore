@@ -1,0 +1,11 @@
+.build/
+*.tiff
+*.pdf
+.DS_Store
+PaperDrop.app/
+PaperDrop.dmg
+Vendor/
+# Derived from project.yml via `xcodegen generate` — never committed.
+PaperDrop.xcodeproj/
+# XcodeGen writes the app Info.plist here.
+PaperDrop/
