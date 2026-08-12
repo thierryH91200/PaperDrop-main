@@ -6,15 +6,28 @@ public enum ScanMode: String, CaseIterable, Sendable {
     case color
 }
 
+/// Where a page comes from. `.auto` uses the feeder when it holds paper,
+/// otherwise the flatbed. Honoured by backends that expose both (eSCL).
+public enum ScanSource: String, CaseIterable, Sendable {
+    case auto
+    case flatbed
+    case feeder
+}
+
 public struct ScanConfig: Sendable {
     public var dpi: Int
     public var mode: ScanMode
+    public var source: ScanSource
     /// Scan area in millimetres; nil = full bed.
     public var areaMM: CGRect?
 
-    public init(dpi: Int = 300, mode: ScanMode = .gray, areaMM: CGRect? = nil) {
+    public init(
+        dpi: Int = 300, mode: ScanMode = .gray,
+        source: ScanSource = .auto, areaMM: CGRect? = nil
+    ) {
         self.dpi = dpi
         self.mode = mode
+        self.source = source
         self.areaMM = areaMM
     }
 }
@@ -65,11 +78,12 @@ public enum ScanError: LocalizedError {
     case cancelled
 
     public var errorDescription: String? {
+        // Localized in the app's main bundle (ScanKit links into the app).
         switch self {
-        case .noDevice: "No scanner found"
-        case let .sessionFailed(s): "Could not open scanner session: \(s)"
-        case let .scanFailed(s): "Scan failed: \(s)"
-        case .cancelled: "Scan cancelled"
+        case .noDevice: String(localized: "No scanner found")
+        case let .sessionFailed(s): String(localized: "Could not open scanner session: \(s)")
+        case let .scanFailed(s): String(localized: "Scan failed: \(s)")
+        case .cancelled: String(localized: "Scan cancelled")
         }
     }
 }
@@ -84,12 +98,31 @@ public protocol ScannerBackend {
         with scanner: ScannerInfo, config: ScanConfig,
         to directory: URL
     ) async throws -> URL
+    /// Scan every page of the job to files and return their URLs. For a
+    /// loaded document feeder this is the whole stack; for the flatbed it is
+    /// a single page. `onPage` fires as each page's file is written, so the
+    /// UI can show pages as they arrive rather than all at the end. Backends
+    /// without feeder support get the default below.
+    func scanBatch(
+        with scanner: ScannerInfo, config: ScanConfig,
+        to directory: URL,
+        onPage: @escaping @Sendable (URL) async -> Void
+    ) async throws -> [URL]
     /// Cancel a running scan, recovering the device if needed.
     /// Returns true when the device is believed healthy afterwards.
     func cancelScan(scannerName: String) async -> Bool
 }
 
 public extension ScannerBackend {
+    func scanBatch(
+        with scanner: ScannerInfo, config: ScanConfig, to directory: URL,
+        onPage: @escaping @Sendable (URL) async -> Void
+    ) async throws -> [URL] {
+        let url = try await scan(with: scanner, config: config, to: directory)
+        await onPage(url)
+        return [url]
+    }
+
     func cancelScan(scannerName _: String) async -> Bool {
         false
     }

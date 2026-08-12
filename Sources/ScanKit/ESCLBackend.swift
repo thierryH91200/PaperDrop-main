@@ -75,8 +75,8 @@ public final class ESCLBackend: NSObject, ScannerBackend, URLSessionDelegate, @u
             resolutions: caps.resolutions,
             // eSCL region units are 1/300", so 300ths -> mm.
             bedSizeMM: CGSize(
-                width: Double(caps.maxW) / 300 * 25.4,
-                height: Double(caps.maxH) / 300 * 25.4
+                width: Double(caps.platen.w) / 300 * 25.4,
+                height: Double(caps.platen.h) / 300 * 25.4
             )
         )
     }
@@ -86,40 +86,89 @@ public final class ESCLBackend: NSObject, ScannerBackend, URLSessionDelegate, @u
     public func scan(
         with scanner: ScannerInfo, config: ScanConfig, to directory: URL
     ) async throws -> URL {
+        guard
+            let first = try await scanBatch(
+                with: scanner, config: config, to: directory, onPage: { _ in }
+            ).first
+        else { throw ScanError.scanFailed(String(localized: "scanner produced no page")) }
+        return first
+    }
+
+    /// Scans the flatbed (one page) or, when the document feeder is loaded,
+    /// the whole stack (many pages) — all from a single eSCL job by pulling
+    /// NextDocument until the scanner reports no more pages. Each written page
+    /// is handed to `onPage` immediately so the UI can show it right away.
+    public func scanBatch(
+        with scanner: ScannerInfo, config: ScanConfig, to directory: URL,
+        onPage: @escaping @Sendable (URL) async -> Void
+    ) async throws -> [URL] {
         guard let base = Self.baseURL(from: scanner.id) else { throw ScanError.noDevice }
         let caps = try await fetchCaps(base)
         // Nearest supported resolution at or above the request.
         let dpi = caps.resolutions.first(where: { $0 >= config.dpi })
             ?? caps.resolutions.last ?? config.dpi
 
-        // Region in 1/300" units; a nil area means the full bed.
-        let mm = config.areaMM
-        let width = mm.map { Int($0.width / 25.4 * 300) } ?? caps.maxW
-        let height = mm.map { Int($0.height / 25.4 * 300) } ?? caps.maxH
-        let xOff = mm.map { Int($0.minX / 25.4 * 300) } ?? 0
-        let yOff = mm.map { Int($0.minY / 25.4 * 300) } ?? 0
+        // Choose the source: explicit request wins; .auto prefers the feeder
+        // only when it actually holds paper. A feeder is only possible when
+        // the device advertises one.
+        let feeder: Bool
+        switch config.source {
+        case .flatbed: feeder = false
+        case .feeder: feeder = caps.adf != nil
+        case .auto: feeder = caps.adf != nil ? await adfLoaded(base) : false
+        }
+
+        // Region (1/300"): honour an explicit crop, else the full area of the
+        // chosen source. Always sent — some scanners reject a feeder job with
+        // no ScanRegions.
+        let bed = feeder ? (caps.adf ?? caps.platen) : caps.platen
+        let region: (w: Int, h: Int, x: Int, y: Int)
+        if let mm = config.areaMM {
+            region = (
+                Int(mm.width / 25.4 * 300), Int(mm.height / 25.4 * 300),
+                Int(mm.minX / 25.4 * 300), Int(mm.minY / 25.4 * 300)
+            )
+        } else {
+            region = (bed.w, bed.h, 0, 0)
+        }
 
         let settings = Self.scanSettingsXML(
             dpi: dpi, mode: config.mode,
-            width: width, height: height, xOffset: xOff, yOffset: yOff
+            source: feeder ? "Feeder" : "Platen", region: region
         )
 
         let job = try await postJob(base: base, settings: settings)
         setCurrentJob(job)
         defer { setCurrentJob(nil) }
 
-        let data = try await fetchDocument(job: job)
-        // Close the job so the scanner returns to Idle: eSCL expects a
-        // trailing NextDocument (which now 404s for a single flatbed page).
-        // Skipping this leaves the device "Processing", and the next scan
-        // gets 503 Busy — i.e. page 1 works but page 2 fails.
-        await closeJob(job)
-
-        let out = directory.appendingPathComponent(
-            "escl-\(Int(Date().timeIntervalSince1970)).jpg"
-        )
-        try data.write(to: out)
-        return out
+        // Pull pages until the job is done. Each NextDocument yields a page
+        // (200), asks us to wait for the next feeder sheet (503 Retry-After),
+        // or reports the job finished (404/410) — which also releases the
+        // scanner. Covers a single flatbed page and a multi-page feeder stack.
+        var pages: [URL] = []
+        let stamp = Int(Date().timeIntervalSince1970)
+        var waited = 0.0
+        loop: while pages.count < 500 {
+            switch try await nextDocument(job) {
+            case let .page(data):
+                let out = directory.appendingPathComponent("escl-\(stamp)-\(pages.count).jpg")
+                try data.write(to: out)
+                pages.append(out)
+                await onPage(out)  // surface this page to the UI immediately
+                waited = 0
+            case let .retry(after):
+                // Next feeder sheet not ready yet; wait and re-ask. Bound the
+                // total wait so a wedged feeder can't hang forever.
+                guard waited < 90 else { break loop }
+                let wait = min(max(after, 0.5), 5)
+                waited += wait
+                try await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000))
+            case .done:
+                break loop
+            }
+        }
+        guard !pages.isEmpty else { throw ScanError.scanFailed(String(localized: "scanner produced no page")) }
+        return pages
     }
 
     // MARK: Cancel
@@ -134,25 +183,45 @@ public final class ESCLBackend: NSObject, ScannerBackend, URLSessionDelegate, @u
 
     // MARK: - eSCL requests
 
-    /// GET <base>/ScannerCapabilities and pull the discrete resolutions and
-    /// the platen's max dimensions (in 1/300" units).
-    private func fetchCaps(_ base: URL) async throws
-        -> (resolutions: [Int], maxW: Int, maxH: Int)
-    {
+    struct Caps {
+        let resolutions: [Int]
+        let platen: (w: Int, h: Int)
+        /// Feeder max dimensions, when the scanner advertises an ADF.
+        let adf: (w: Int, h: Int)?
+    }
+
+    /// GET <base>/ScannerCapabilities: discrete resolutions plus the max
+    /// dimensions (1/300") of the platen and, if present, the feeder. The
+    /// capabilities XML has a `<scan:Platen>` section followed by an optional
+    /// `<scan:Adf>` one, each with its own MaxWidth/MaxHeight.
+    private func fetchCaps(_ base: URL) async throws -> Caps {
         let (data, resp) = try await session.data(
             from: base.appendingPathComponent("ScannerCapabilities")
         )
         guard (resp as? HTTPURLResponse)?.statusCode == 200,
             let xml = String(data: data, encoding: .utf8)
-        else { throw ScanError.sessionFailed("scanner did not return capabilities") }
+        else { throw ScanError.sessionFailed(String(localized: "scanner did not return capabilities")) }
 
-        let res = Self.allInts(in: xml, tag: "scan:XResolution")
-        let resolutions = Array(Set(res)).sorted()
-        let maxW = Self.firstInt(in: xml, tag: "scan:MaxWidth") ?? 2550
-        let maxH = Self.firstInt(in: xml, tag: "scan:MaxHeight") ?? 3510
-        return (
-            resolutions.isEmpty ? [100, 200, 300, 600] : resolutions,
-            maxW, maxH
+        let resolutions = Array(Set(Self.allInts(in: xml, tag: "scan:XResolution"))).sorted()
+
+        // Split platen vs feeder at the <scan:Adf> boundary.
+        let adfStart = xml.range(of: "<scan:Adf")
+        let platenXML = adfStart.map { String(xml[xml.startIndex..<$0.lowerBound]) } ?? xml
+        let adfXML = adfStart.map { String(xml[$0.lowerBound...]) }
+
+        let platen = (
+            w: Self.firstInt(in: platenXML, tag: "scan:MaxWidth") ?? 2550,
+            h: Self.firstInt(in: platenXML, tag: "scan:MaxHeight") ?? 3510
+        )
+        let adf = adfXML.map {
+            (
+                w: Self.firstInt(in: $0, tag: "scan:MaxWidth") ?? platen.w,
+                h: Self.firstInt(in: $0, tag: "scan:MaxHeight") ?? platen.h
+            )
+        }
+        return Caps(
+            resolutions: resolutions.isEmpty ? [100, 200, 300, 600] : resolutions,
+            platen: platen, adf: adf
         )
     }
 
@@ -167,13 +236,13 @@ public final class ESCLBackend: NSObject, ScannerBackend, URLSessionDelegate, @u
             req.httpBody = Data(settings.utf8)
             let (_, resp) = try await session.data(for: req)
             guard let http = resp as? HTTPURLResponse else {
-                throw ScanError.scanFailed("no HTTP response from scanner")
+                throw ScanError.scanFailed(String(localized: "no HTTP response from scanner"))
             }
             switch http.statusCode {
             case 201:
                 guard let loc = http.value(forHTTPHeaderField: "Location"),
                     let job = URL(string: loc, relativeTo: base)?.absoluteURL
-                else { throw ScanError.scanFailed("scanner returned no job location") }
+                else { throw ScanError.scanFailed(String(localized: "scanner returned no job location")) }
                 return job
             case 503 where attempt < 2:
                 // Busy — wait the advertised Retry-After (default a few s).
@@ -181,32 +250,53 @@ public final class ESCLBackend: NSObject, ScannerBackend, URLSessionDelegate, @u
                     .flatMap(Double.init) ?? 5
                 try await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000))
             case 409:
-                throw ScanError.scanFailed("scanner rejected the scan settings")
+                throw ScanError.scanFailed(String(localized: "scanner rejected the scan settings"))
             default:
-                throw ScanError.scanFailed("scanner returned HTTP \(http.statusCode)")
+                throw ScanError.scanFailed(String(localized: "scanner returned HTTP \(http.statusCode)"))
             }
         }
-        throw ScanError.scanFailed("scanner busy")
+        throw ScanError.scanFailed(String(localized: "scanner busy"))
     }
 
-    /// GET <job>/NextDocument — the bytes of the (single flatbed) page.
-    private func fetchDocument(job: URL) async throws -> Data {
-        let (data, resp) = try await session.data(
-            from: job.appendingPathComponent("NextDocument")
-        )
-        guard let http = resp as? HTTPURLResponse else {
-            throw ScanError.scanFailed("no HTTP response for document")
-        }
-        guard http.statusCode == 200, !data.isEmpty else {
-            throw ScanError.scanFailed("scanner returned HTTP \(http.statusCode) for the page")
-        }
-        return data
+    private enum NextPage {
+        case page(Data)
+        /// The next feeder sheet isn't ready yet — wait this long and re-ask.
+        case retry(after: TimeInterval)
+        /// No more pages; the job is finished.
+        case done
     }
 
-    /// Drain the job with a final NextDocument (expected 404) so the scanner
-    /// finishes it and frees itself for the next scan. Best-effort.
-    private func closeJob(_ job: URL) async {
-        _ = try? await session.data(from: job.appendingPathComponent("NextDocument"))
+    /// GET <job>/NextDocument. 200 = a page; 503 = wait for the next feeder
+    /// sheet (Retry-After); anything else (404/410) = the job is finished,
+    /// which also releases the device back to Idle.
+    private func nextDocument(_ job: URL) async throws -> NextPage {
+        var req = URLRequest(url: job.appendingPathComponent("NextDocument"))
+        // A feeder sheet can take a while to advance; don't time out early.
+        req.timeoutInterval = 120
+        let (data, resp) = try await session.data(for: req)
+        guard let http = resp as? HTTPURLResponse else { return .done }
+        switch http.statusCode {
+        case 200 where !data.isEmpty:
+            return .page(data)
+        case 503:
+            let after = http.value(forHTTPHeaderField: "Retry-After").flatMap(Double.init) ?? 1
+            return .retry(after: after)
+        default:
+            return .done
+        }
+    }
+
+    /// True when the document feeder is loaded (paper present) per the
+    /// scanner's status, so the scan should pull from the feeder.
+    private func adfLoaded(_ base: URL) async -> Bool {
+        guard
+            let (data, resp) = try? await session.data(
+                from: base.appendingPathComponent("ScannerStatus")
+            ),
+            (resp as? HTTPURLResponse)?.statusCode == 200,
+            let xml = String(data: data, encoding: .utf8)
+        else { return false }
+        return xml.contains("ScannerAdfLoaded")
     }
 
     // MARK: - Helpers
@@ -231,25 +321,30 @@ public final class ESCLBackend: NSObject, ScannerBackend, URLSessionDelegate, @u
     }
 
     private static func scanSettingsXML(
-        dpi: Int, mode: ScanMode,
-        width: Int, height: Int, xOffset: Int, yOffset: Int
+        dpi: Int, mode: ScanMode, source: String,
+        region: (w: Int, h: Int, x: Int, y: Int)?
     ) -> String {
-        """
+        let regions = region.map { r in
+            """
+              <pwg:ScanRegions>
+                <pwg:ScanRegion>
+                  <pwg:Height>\(r.h)</pwg:Height>
+                  <pwg:Width>\(r.w)</pwg:Width>
+                  <pwg:XOffset>\(r.x)</pwg:XOffset>
+                  <pwg:YOffset>\(r.y)</pwg:YOffset>
+                  <pwg:ContentRegionUnits>escl:ThreeHundredthsOfInches</pwg:ContentRegionUnits>
+                </pwg:ScanRegion>
+              </pwg:ScanRegions>
+            """
+        } ?? ""
+        return """
         <?xml version="1.0" encoding="UTF-8"?>
         <scan:ScanSettings xmlns:scan="http://schemas.hp.com/imaging/escl/2011/05/03" \
         xmlns:pwg="http://www.pwg.org/schemas/2010/12/sm">
           <pwg:Version>2.63</pwg:Version>
           <scan:Intent>Document</scan:Intent>
-          <pwg:ScanRegions>
-            <pwg:ScanRegion>
-              <pwg:Height>\(height)</pwg:Height>
-              <pwg:Width>\(width)</pwg:Width>
-              <pwg:XOffset>\(xOffset)</pwg:XOffset>
-              <pwg:YOffset>\(yOffset)</pwg:YOffset>
-              <pwg:ContentRegionUnits>escl:ThreeHundredthsOfInches</pwg:ContentRegionUnits>
-            </pwg:ScanRegion>
-          </pwg:ScanRegions>
-          <pwg:InputSource>Platen</pwg:InputSource>
+        \(regions)
+          <pwg:InputSource>\(source)</pwg:InputSource>
           <scan:ColorMode>\(esclColorMode(mode))</scan:ColorMode>
           <scan:XResolution>\(dpi)</scan:XResolution>
           <scan:YResolution>\(dpi)</scan:YResolution>

@@ -51,6 +51,68 @@ public extension Pipeline.GrayImage {
     }
 }
 
+public extension Pipeline {
+    /// A colour scan held as an RGBA buffer. Deliberately mirrors GrayImage
+    /// (same context orientation, same crop maths) so a colour page crops and
+    /// renders exactly like the grayscale path does.
+    struct ColorImage {
+        public let width: Int
+        public let height: Int
+        public var pixels: [UInt8]  // RGBA, 4 bytes/px
+        public init(width: Int, height: Int, pixels: [UInt8]) {
+            self.width = width
+            self.height = height
+            self.pixels = pixels
+        }
+
+        public func cropped(_ c: Pipeline.Crop) -> ColorImage {
+            let cw = c.x1 - c.x0, ch = c.y1 - c.y0
+            var out = [UInt8](repeating: 0, count: cw * ch * 4)
+            for y in 0..<ch {
+                let src = ((y + c.y0) * width + c.x0) * 4
+                out.replaceSubrange(
+                    (y * cw * 4)..<(y * cw * 4 + cw * 4),
+                    with: pixels[src..<(src + cw * 4)]
+                )
+            }
+            return ColorImage(width: cw, height: ch, pixels: out)
+        }
+
+        public var cgImage: CGImage? {
+            guard let provider = CGDataProvider(data: Data(pixels) as CFData) else { return nil }
+            return CGImage(
+                width: width, height: height,
+                bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: width * 4,
+                space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.premultipliedLast.rawValue),
+                provider: provider, decode: nil,
+                shouldInterpolate: true, intent: .defaultIntent
+            )
+        }
+    }
+
+    /// Load a scan in colour (RGBA), the colour counterpart of loadGray.
+    static func loadColor(_ url: URL) throws -> ColorImage {
+        guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
+            let img = CGImageSourceCreateImageAtIndex(src, 0, nil)
+        else {
+            throw ScanError.scanFailed(String(localized: "Cannot read image \(url.lastPathComponent)"))
+        }
+        let w = img.width, h = img.height
+        var pixels = [UInt8](repeating: 0, count: w * h * 4)
+        let cs = CGColorSpaceCreateDeviceRGB()
+        pixels.withUnsafeMutableBytes { buf in
+            let ctx = CGContext(
+                data: buf.baseAddress, width: w, height: h,
+                bitsPerComponent: 8, bytesPerRow: w * 4, space: cs,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            )!
+            ctx.draw(img, in: CGRect(x: 0, y: 0, width: w, height: h))
+        }
+        return ColorImage(width: w, height: h, pixels: pixels)
+    }
+}
+
 /// Shared ImageIO encoding (used for JPEG pages and G4 TIFFs).
 public enum ImageEncode {
     public static func jpeg(

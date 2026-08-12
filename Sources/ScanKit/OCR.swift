@@ -13,7 +13,7 @@ public enum OCR {
     /// Recognise text on a 1-bit page (works on the packed page directly).
     public static func recognize(_ page: Pipeline.ProcessedPage) throws -> [Word] {
         guard let img = page.cgImage else {
-            throw ScanError.scanFailed("Cannot build image for OCR")
+            throw ScanError.scanFailed(String(localized: "Cannot build image for OCR"))
         }
 
         let request = VNRecognizeTextRequest()

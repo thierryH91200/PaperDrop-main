@@ -10,6 +10,7 @@ name: PaperDrop
 options:
   bundleIdPrefix: com.bensquire
   createIntermediateGroups: true
+  developmentLanguage: en
   deploymentTarget:
     macOS: "13.0"
 

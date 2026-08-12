@@ -139,7 +139,7 @@ public final class SANECLIBackend: ScannerBackend {
                 "Scanner not found — check it is connected and powered"
             )
         }
-        var lastError: Error = ScanError.scanFailed("scan did not run")
+        var lastError: Error = ScanError.scanFailed(String(localized: "scan did not run"))
         for attempt in 1...3 {
             do {
                 return try await scanOnce(
@@ -195,7 +195,7 @@ public final class SANECLIBackend: ScannerBackend {
         // Generous timeout: killing scanimage mid-pass wedges the scanner.
         _ = try await runAsync(scanimage, args, timeout: 1200, track: true)
         guard FileManager.default.fileExists(atPath: dest.path) else {
-            throw ScanError.scanFailed("scanimage produced no file")
+            throw ScanError.scanFailed(String(localized: "scanimage produced no file"))
         }
         return dest
     }

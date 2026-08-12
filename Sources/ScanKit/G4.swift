@@ -9,7 +9,7 @@ public enum G4 {
     /// Encode a processed 1-bit page as a G4-compressed TIFF (bytes).
     public static func tiff(from page: Pipeline.ProcessedPage) throws -> Data {
         guard let img = page.cgImage else {
-            throw ScanError.scanFailed("Cannot build 1-bit image")
+            throw ScanError.scanFailed(String(localized: "Cannot build 1-bit image"))
         }
         let dpi = page.dpi
         guard
@@ -25,7 +25,7 @@ public enum G4 {
                     kCGImagePropertyDPIHeight: dpi,
                 ]
             )
-        else { throw ScanError.scanFailed("TIFF encode failed") }
+        else { throw ScanError.scanFailed(String(localized: "TIFF encode failed")) }
         return data
     }
 

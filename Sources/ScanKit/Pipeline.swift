@@ -18,7 +18,7 @@ public enum Pipeline {
         guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
             let img = CGImageSourceCreateImageAtIndex(src, 0, nil)
         else {
-            throw ScanError.scanFailed("Cannot read image \(url.lastPathComponent)")
+            throw ScanError.scanFailed(String(localized: "Cannot read image \(url.lastPathComponent)"))
         }
         let w = img.width, h = img.height
         var pixels = [UInt8](repeating: 0, count: w * h)

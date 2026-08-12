@@ -8,7 +8,10 @@ let package = Package(
         .target(name: "ScanKit", path: "Sources/ScanKit"),
         .executableTarget(
             name: "PaperDrop", dependencies: ["ScanKit"],
-            path: "Sources/PaperDrop"
+            path: "Sources/PaperDrop",
+            // The String Catalog is compiled by the Xcode project (the real
+            // build); this secondary SwiftPM build only checks compilation.
+            exclude: ["Localizable.xcstrings"]
         ),
         .executableTarget(
             name: "scantool", dependencies: ["ScanKit"],

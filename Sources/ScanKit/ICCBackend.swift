@@ -217,7 +217,7 @@ private final class ScanSession: NSObject, ICScannerDeviceDelegate, @unchecked S
 
     func device(_: ICDevice, didCloseSessionWithError _: Error?) {}
     func didRemove(_: ICDevice) {
-        let err = ScanError.scanFailed("Scanner disconnected")
+        let err = ScanError.scanFailed(String(localized: "Scanner disconnected"))
         openCont?.resume(throwing: err)
         openCont = nil
         selectCont?.resume(throwing: err)
@@ -255,7 +255,7 @@ private final class ScanSession: NSObject, ICScannerDeviceDelegate, @unchecked S
         } else if let url = scannedURL {
             scanCont?.resume(returning: url)
         } else {
-            scanCont?.resume(throwing: ScanError.scanFailed("No file produced"))
+            scanCont?.resume(throwing: ScanError.scanFailed(String(localized: "No file produced")))
         }
         scanCont = nil
     }
