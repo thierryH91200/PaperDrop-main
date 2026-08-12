@@ -107,6 +107,11 @@ targets:
     platform: macOS
     sources:
       - Tests/ScanKitTests
+    settings:
+      base:
+        # xcodebuild code-signs the test bundle and needs an Info.plist;
+        # let Xcode synthesize one rather than shipping a stub file.
+        GENERATE_INFOPLIST_FILE: "YES"
     dependencies:
       - target: ScanKit
       - sdk: IOKit.framework
