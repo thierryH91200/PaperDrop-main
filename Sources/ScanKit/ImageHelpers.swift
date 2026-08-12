@@ -113,6 +113,15 @@ public extension Pipeline {
     }
 }
 
+/// Decode compressed image data (e.g. a stored JPEG) back to a CGImage,
+/// so a page's text layer can be OCR'd lazily from what will be embedded.
+public enum ImageDecode {
+    public static func cgImage(_ data: Data) -> CGImage? {
+        guard let src = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+        return CGImageSourceCreateImageAtIndex(src, 0, nil)
+    }
+}
+
 /// Shared ImageIO encoding (used for JPEG pages and G4 TIFFs).
 public enum ImageEncode {
     public static func jpeg(

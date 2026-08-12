@@ -15,11 +15,16 @@ public enum OCR {
         guard let img = page.cgImage else {
             throw ScanError.scanFailed(String(localized: "Cannot build image for OCR"))
         }
+        return try recognize(img)
+    }
 
+    /// Recognise text on any image. Bounding boxes are normalised, so they
+    /// apply regardless of the page's colour space or size.
+    public static func recognize(_ image: CGImage) throws -> [Word] {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = true
-        try VNImageRequestHandler(cgImage: img).perform([request])
+        try VNImageRequestHandler(cgImage: image).perform([request])
         var words: [Word] = []
         for obs in request.results ?? [] {
             guard let candidate = obs.topCandidates(1).first else { continue }
