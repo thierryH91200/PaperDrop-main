@@ -105,7 +105,8 @@ public final class ESCLBackend: NSObject, ScannerBackend, URLSessionDelegate, @u
         guard let base = Self.baseURL(from: scanner.id) else { throw ScanError.noDevice }
         let caps = try await fetchCaps(base)
         // Nearest supported resolution at or above the request.
-        let dpi = caps.resolutions.first(where: { $0 >= config.dpi })
+        let dpi =
+            caps.resolutions.first(where: { $0 >= config.dpi })
             ?? caps.resolutions.last ?? config.dpi
 
         // Choose the source: explicit request wins; .auto prefers the feeder
@@ -167,7 +168,9 @@ public final class ESCLBackend: NSObject, ScannerBackend, URLSessionDelegate, @u
                 break loop
             }
         }
-        guard !pages.isEmpty else { throw ScanError.scanFailed(String(localized: "scanner produced no page")) }
+        guard !pages.isEmpty else {
+            throw ScanError.scanFailed(String(localized: "scanner produced no page"))
+        }
         return pages
     }
 
@@ -246,7 +249,8 @@ public final class ESCLBackend: NSObject, ScannerBackend, URLSessionDelegate, @u
                 return job
             case 503 where attempt < 2:
                 // Busy — wait the advertised Retry-After (default a few s).
-                let wait = http.value(forHTTPHeaderField: "Retry-After")
+                let wait =
+                    http.value(forHTTPHeaderField: "Retry-After")
                     .flatMap(Double.init) ?? 5
                 try await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000))
             case 409:
@@ -303,7 +307,9 @@ public final class ESCLBackend: NSObject, ScannerBackend, URLSessionDelegate, @u
 
     private func setCurrentJob(_ job: URL?) { withJobLock { currentJob = job } }
     private func withJobLock<T>(_ body: () -> T) -> T {
-        jobLock.lock(); defer { jobLock.unlock() }; return body()
+        jobLock.lock()
+        defer { jobLock.unlock() }
+        return body()
     }
 
     /// Device id is "escl:" + the eSCL base URL (e.g. "escl:https://…/eSCL").
@@ -324,33 +330,34 @@ public final class ESCLBackend: NSObject, ScannerBackend, URLSessionDelegate, @u
         dpi: Int, mode: ScanMode, source: String,
         region: (w: Int, h: Int, x: Int, y: Int)?
     ) -> String {
-        let regions = region.map { r in
-            """
-              <pwg:ScanRegions>
-                <pwg:ScanRegion>
-                  <pwg:Height>\(r.h)</pwg:Height>
-                  <pwg:Width>\(r.w)</pwg:Width>
-                  <pwg:XOffset>\(r.x)</pwg:XOffset>
-                  <pwg:YOffset>\(r.y)</pwg:YOffset>
-                  <pwg:ContentRegionUnits>escl:ThreeHundredthsOfInches</pwg:ContentRegionUnits>
-                </pwg:ScanRegion>
-              </pwg:ScanRegions>
-            """
-        } ?? ""
+        let regions =
+            region.map { r in
+                """
+                  <pwg:ScanRegions>
+                    <pwg:ScanRegion>
+                      <pwg:Height>\(r.h)</pwg:Height>
+                      <pwg:Width>\(r.w)</pwg:Width>
+                      <pwg:XOffset>\(r.x)</pwg:XOffset>
+                      <pwg:YOffset>\(r.y)</pwg:YOffset>
+                      <pwg:ContentRegionUnits>escl:ThreeHundredthsOfInches</pwg:ContentRegionUnits>
+                    </pwg:ScanRegion>
+                  </pwg:ScanRegions>
+                """
+            } ?? ""
         return """
-        <?xml version="1.0" encoding="UTF-8"?>
-        <scan:ScanSettings xmlns:scan="http://schemas.hp.com/imaging/escl/2011/05/03" \
-        xmlns:pwg="http://www.pwg.org/schemas/2010/12/sm">
-          <pwg:Version>2.63</pwg:Version>
-          <scan:Intent>Document</scan:Intent>
-        \(regions)
-          <pwg:InputSource>\(source)</pwg:InputSource>
-          <scan:ColorMode>\(esclColorMode(mode))</scan:ColorMode>
-          <scan:XResolution>\(dpi)</scan:XResolution>
-          <scan:YResolution>\(dpi)</scan:YResolution>
-          <pwg:DocumentFormat>image/jpeg</pwg:DocumentFormat>
-        </scan:ScanSettings>
-        """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <scan:ScanSettings xmlns:scan="http://schemas.hp.com/imaging/escl/2011/05/03" \
+            xmlns:pwg="http://www.pwg.org/schemas/2010/12/sm">
+              <pwg:Version>2.63</pwg:Version>
+              <scan:Intent>Document</scan:Intent>
+            \(regions)
+              <pwg:InputSource>\(source)</pwg:InputSource>
+              <scan:ColorMode>\(esclColorMode(mode))</scan:ColorMode>
+              <scan:XResolution>\(dpi)</scan:XResolution>
+              <scan:YResolution>\(dpi)</scan:YResolution>
+              <pwg:DocumentFormat>image/jpeg</pwg:DocumentFormat>
+            </scan:ScanSettings>
+            """
     }
 
     private static func firstInt(in xml: String, tag: String) -> Int? {
@@ -460,7 +467,8 @@ private final class ESCLDiscovery: NSObject, NetServiceBrowserDelegate, NetServi
             if cand.uscanPort == nil || (isTLS && !cand.uscanTLS) {
                 cand.uscanPort = service.port
                 cand.uscanTLS = isTLS
-                let txt = service.txtRecordData()
+                let txt =
+                    service.txtRecordData()
                     .map { NetService.dictionary(fromTXTRecord: $0) } ?? [:]
                 cand.rs = txt["rs"].flatMap { String(data: $0, encoding: .utf8) } ?? "eSCL"
             }

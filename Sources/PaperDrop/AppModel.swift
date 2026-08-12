@@ -472,7 +472,7 @@ enum DuplexStage {
 
 /// How a scanned page is rendered into the PDF.
 enum OutputMode: String, CaseIterable, Sendable {
-    case document   // 1-bit CCITT G4 (compact text, OCR)
+    case document  // 1-bit CCITT G4 (compact text, OCR)
     case grayscale  // 8-bit grayscale JPEG
-    case color      // 24-bit RGB JPEG
+    case color  // 24-bit RGB JPEG
 }

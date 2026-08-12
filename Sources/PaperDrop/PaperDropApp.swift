@@ -3,7 +3,7 @@ import SwiftUI
 @main
 struct PaperDropApp: App {
     @StateObject private var model = AppModel()
-    
+
     @NSApplicationDelegateAdaptor(AppDelegate.self) var delegate
 
     var body: some Scene {

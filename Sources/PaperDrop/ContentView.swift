@@ -90,13 +90,15 @@ struct ContentView: View {
                         Text(src.label).tag(src)
                     }
                 }
-                Toggle("Two-sided (recto/verso)", isOn: Binding(
-                    get: { model.duplex },
-                    set: { on in
-                        model.duplex = on
-                        if !on { model.resetDuplexStaging() }
-                    }
-                ))
+                Toggle(
+                    "Two-sided (recto/verso)",
+                    isOn: Binding(
+                        get: { model.duplex },
+                        set: { on in
+                            model.duplex = on
+                            if !on { model.resetDuplexStaging() }
+                        }
+                    ))
                 Picker("Mode", selection: $model.outputMode) {
                     Text("Document").tag(OutputMode.document)
                     Text("Grayscale").tag(OutputMode.grayscale)
@@ -147,11 +149,15 @@ struct ContentView: View {
 
             Divider()
             HStack(spacing: 10) {
-                Button(role: .destructive) { model.discardAll() } label: {
+                Button(role: .destructive) {
+                    model.discardAll()
+                } label: {
                     Text("Discard").frame(maxWidth: .infinity)
                 }
                 .disabled(model.busy || model.pages.isEmpty)
-                Button { model.savePDF() } label: {
+                Button {
+                    model.savePDF()
+                } label: {
                     Label("Save PDF", systemImage: "square.and.arrow.down")
                         .frame(maxWidth: .infinity)
                 }
