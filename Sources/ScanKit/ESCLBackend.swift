@@ -100,7 +100,7 @@ public final class ESCLBackend: NSObject, ScannerBackend, URLSessionDelegate, @u
     /// is handed to `onPage` immediately so the UI can show it right away.
     public func scanBatch(
         with scanner: ScannerInfo, config: ScanConfig, to directory: URL,
-        onPage: @escaping @Sendable (URL) async -> Void
+        onPage: @escaping @Sendable (URL) async throws -> Void
     ) async throws -> [URL] {
         guard let base = Self.baseURL(from: scanner.id) else { throw ScanError.noDevice }
         let caps = try await fetchCaps(base)
@@ -154,7 +154,7 @@ public final class ESCLBackend: NSObject, ScannerBackend, URLSessionDelegate, @u
                 let out = directory.appendingPathComponent("escl-\(stamp)-\(pages.count).jpg")
                 try data.write(to: out)
                 pages.append(out)
-                await onPage(out)  // surface this page to the UI immediately
+                try await onPage(out)  // surface this page to the UI immediately
                 waited = 0
             case let .retry(after):
                 // Next feeder sheet not ready yet; wait and re-ask. Bound the

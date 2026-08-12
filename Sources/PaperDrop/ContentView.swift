@@ -1,0 +1,494 @@
+import ScanKit
+import SwiftUI
+
+/// Gentle hover feedback — macOS button styles give little or none.
+/// Inert while the control is disabled.
+struct HoverHighlight: ViewModifier {
+    var scale: CGFloat = 1.02
+    @State private var hovering = false
+    @Environment(\.isEnabled) private var isEnabled
+
+    func body(content: Content) -> some View {
+        let active = hovering && isEnabled
+        content
+            .brightness(active ? 0.07 : 0)
+            .scaleEffect(active ? scale : 1)
+            .animation(.easeOut(duration: 0.12), value: active)
+            .onHover { hovering = $0 }
+    }
+}
+
+extension View {
+    func hoverHighlight(scale: CGFloat = 1.02) -> some View {
+        modifier(HoverHighlight(scale: scale))
+    }
+}
+
+/// UI presentation for the scan-source options — kept in the app layer so
+/// ScanKit stays free of view concerns.
+extension ScanSource {
+    var label: String {
+        switch self {
+        case .auto: String(localized: "Automatic")
+        case .flatbed: String(localized: "Flatbed")
+        case .feeder: String(localized: "Feeder")
+        }
+    }
+}
+
+struct ContentView: View {
+    @EnvironmentObject var model: AppModel
+
+    var body: some View {
+        HStack(spacing: 0) {
+            sidebar
+            Divider()
+            VStack(spacing: 0) {
+                if model.duplex && !model.duplexMerged { duplexBanner }
+                if model.pages.isEmpty {
+                    emptyState
+                } else {
+                    pageGrid
+                }
+                statusBar
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .frame(minWidth: 780, minHeight: 480)
+        .onAppear { model.discoverScanners() }
+    }
+
+    // MARK: Sidebar — scan settings panel
+
+    private var sidebar: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Scan Settings")
+                .font(.headline)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 2)
+            Form {
+                Section {
+                    Picker("Scanner", selection: $model.selectedScannerID) {
+                        if model.scanners.isEmpty {
+                            (model.discovering ? Text("Searching…") : Text("No scanners"))
+                                .tag(String?.none)
+                        }
+                        ForEach(model.scanners) { s in
+                            Text(s.name).tag(String?.some(s.id))
+                        }
+                    }
+                    Button {
+                        model.discoverScanners()
+                    } label: {
+                        Label("Search Again", systemImage: "arrow.clockwise")
+                    }
+                    .disabled(model.discovering)
+                }
+
+                Picker("Source", selection: $model.scanSource) {
+                    ForEach(ScanSource.allCases, id: \.self) { src in
+                        Text(src.label).tag(src)
+                    }
+                }
+                Toggle("Two-sided (recto/verso)", isOn: Binding(
+                    get: { model.duplex },
+                    set: { on in
+                        model.duplex = on
+                        if !on { model.resetDuplexStaging() }
+                    }
+                ))
+                Picker("Mode", selection: $model.outputMode) {
+                    Text("Document").tag(OutputMode.document)
+                    Text("Grayscale").tag(OutputMode.grayscale)
+                    Text("Color").tag(OutputMode.color)
+                }
+                Picker("Resolution", selection: $model.dpi) {
+                    ForEach(model.availableDPIs, id: \.self) { d in
+                        Text("\(d) dpi").tag(d)
+                    }
+                }
+                Picker("Paper", selection: $model.paperChoice) {
+                    Text("Auto size").tag("auto")
+                    ForEach(AppModel.fixedPapers, id: \.key) { paper in
+                        Text(paper.label).tag(paper.key)
+                    }
+                }
+                // Snapping only applies to auto-detected sizes; a forced
+                // paper size overrides it.
+                Toggle("Snap to standard sizes", isOn: $model.paperSnap)
+                    .disabled(model.paperChoice != "auto")
+                // Orientation only bites alongside a forced paper size;
+                // auto-detect derives it from the page it found.
+                Picker("Orientation", selection: $model.paperLandscape) {
+                    Text("Portrait").tag(false)
+                    Text("Landscape").tag(true)
+                }
+                .disabled(model.fixedPaperMM == nil)
+
+                Section {
+                    LabeledContent("Format") { Text("PDF") }
+                    TextField("Document name", text: $model.docName)
+                        .onSubmit { model.savePDF() }
+                    LabeledContent("Folder") {
+                        HStack(spacing: 6) {
+                            Text(URL(fileURLWithPath: model.archivePath).lastPathComponent)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                                .foregroundStyle(.secondary)
+                            Button("Choose…") { chooseFolder() }
+                        }
+                    }
+                    Toggle("OCR", isOn: $model.ocrEnabled)
+                        .help("Add an invisible, searchable text layer")
+                    Toggle("Uniform pages", isOn: $model.uniformPages)
+                }
+            }
+            .formStyle(.grouped)
+
+            Divider()
+            HStack(spacing: 10) {
+                Button(role: .destructive) { model.discardAll() } label: {
+                    Text("Discard").frame(maxWidth: .infinity)
+                }
+                .disabled(model.busy || model.pages.isEmpty)
+                Button { model.savePDF() } label: {
+                    Label("Save PDF", systemImage: "square.and.arrow.down")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!model.canSave)
+            }
+            .padding(12)
+        }
+        // Clear the floating toolbar / window controls at the top.
+        .padding(.top, 40)
+        .frame(width: 260)
+    }
+
+    // MARK: Duplex guidance banner
+
+    @ViewBuilder
+    private var duplexBanner: some View {
+        let fronts = model.duplexStage == .fronts
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                Image(systemName: fronts ? "1.circle.fill" : "2.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(.tint)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(fronts ? "Scan the fronts" : "Now scan the backs")
+                        .fontWeight(.medium)
+                    Text(
+                        fronts
+                            ? "Load the stack in the feeder."
+                            : "Flip the stack, scan, then Save PDF."
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+                Spacer()
+                // Only the fronts→backs step needs a button; saving does the
+                // interleave automatically at the end.
+                if fronts {
+                    Button("Backs →") { model.duplexProceedToBacks() }
+                        .disabled(model.pages.isEmpty || model.busy)
+                        .hoverHighlight()
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(.tint.opacity(0.10))
+            Divider()
+        }
+    }
+
+    /// Pick the archive folder that saved PDFs land in.
+    private func chooseFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        panel.directoryURL = URL(fileURLWithPath: model.archivePath)
+        if panel.runModal() == .OK, let url = panel.url {
+            model.archivePath = url.path
+        }
+    }
+
+    // MARK: Empty state
+
+    private var emptyState: some View {
+        VStack(spacing: 18) {
+            Spacer()
+            if model.discovering {
+                ProgressView()
+                Text("Looking for scanners…")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+            } else if model.scanners.isEmpty {
+                noScannerState
+            } else {
+                readyToScanState
+            }
+            Spacer()
+            // Two spacers below, one above: every state sits slightly above
+            // centre, so finishing a search doesn't jump the content.
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var noScannerState: some View {
+        VStack(spacing: 0) {
+            Image(systemName: "scanner")
+                .font(.system(size: 64, weight: .thin))
+                .foregroundStyle(.tertiary)
+            Text("No scanner found")
+                .font(.title3)
+                .foregroundStyle(.secondary)
+                .padding(.top, 18)
+            Text("Check it's connected and powered on")
+                .font(.callout)
+                .foregroundStyle(.orange)
+                .padding(.top, 6)
+            Button {
+                model.discoverScanners()
+            } label: {
+                Label("Search Again", systemImage: "arrow.clockwise")
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .hoverHighlight()
+            .padding(.top, 24)
+        }
+    }
+
+    private var readyToScanState: some View {
+        VStack(spacing: 18) {
+            Image(systemName: "doc.viewfinder")
+                .font(.system(size: 64, weight: .thin))
+                .foregroundStyle(.tertiary)
+            Text("Place a document on the scanner")
+                .font(.title3)
+                .foregroundStyle(.secondary)
+            if model.scanning {
+                ProgressView()
+                cancelScanButton("Cancel Scan", large: true)
+            } else {
+                Button(action: model.scanPage) {
+                    Label("Scan First Page", systemImage: "scanner")
+                        .font(.title3)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 8)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .hoverHighlight()
+                .disabled(model.busy || model.selectedScanner == nil)
+                .keyboardShortcut(.defaultAction)
+            }
+            if model.selectedScanner == nil {
+                Text("Choose a scanner in the panel")
+                    .font(.callout)
+                    .foregroundStyle(.orange)
+            }
+        }
+    }
+
+    // MARK: Page grid
+
+    private let columns = [
+        GridItem(
+            .adaptive(minimum: 150, maximum: 190),
+            spacing: 16
+        )
+    ]
+
+    @State private var draggingID: UUID?
+
+    private var pageGrid: some View {
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: 16) {
+                ForEach(Array(model.pages.enumerated()), id: \.element.id) { idx, page in
+                    PageCell(page: page, number: idx + 1, kindLabel: model.duplexTag(for: idx)) {
+                        model.deletePage(page.id)
+                    }
+                    .opacity(draggingID == page.id ? 0.4 : 1)
+                    .onDrag {
+                        draggingID = page.id
+                        return NSItemProvider(object: page.id.uuidString as NSString)
+                    }
+                    .onDrop(
+                        of: [.text],
+                        delegate: PageReorderDelegate(
+                            targetID: page.id,
+                            draggingID: $draggingID,
+                            model: model
+                        )
+                    )
+                }
+                scanNextCell
+            }
+            .padding(16)
+        }
+    }
+
+    private var scanNextCell: some View {
+        Button(action: model.scanPage) {
+            VStack(spacing: 10) {
+                if model.scanning {
+                    ProgressView()
+                    Text("Scanning…").font(.callout)
+                    cancelScanButton("Cancel", large: false)
+                } else {
+                    Image(systemName: "plus.viewfinder")
+                        .font(.system(size: 34, weight: .thin))
+                    Text("Scan Next Page").font(.callout)
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 200)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6]))
+                    .foregroundStyle(.tertiary)
+            )
+        }
+        .buttonStyle(.plain)
+        .hoverHighlight(scale: 1.01)
+        .disabled(model.busy)
+        .keyboardShortcut(.defaultAction)
+    }
+
+    private func cancelScanButton(_ title: LocalizedStringKey, large: Bool) -> some View {
+        Button(role: .destructive) {
+            model.cancelScan()
+        } label: {
+            Label(title, systemImage: "stop.circle")
+                .padding(.horizontal, large ? 10 : 0)
+                .padding(.vertical, large ? 4 : 0)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(large ? .large : .regular)
+        .hoverHighlight()
+    }
+
+    // MARK: Status bar
+
+    private var statusBar: some View {
+        HStack(spacing: 8) {
+            if model.scanning || model.saving {
+                ProgressView().controlSize(.small)
+            }
+            if let err = model.errorText {
+                Label(err, systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.red)
+                    .lineLimit(1)
+                    .help(err)
+            } else {
+                Text(model.statusText)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer()
+            if !model.pages.isEmpty {
+                (model.pages.count == 1
+                    ? Text("1 page") : Text("\(model.pages.count) pages"))
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+        }
+        .font(.callout)
+        .padding(.horizontal, 24)
+        .padding(.vertical, 6)
+        .background(.bar)
+    }
+
+}
+
+// MARK: - Drag reorder
+
+struct PageReorderDelegate: DropDelegate {
+    let targetID: UUID
+    @Binding var draggingID: UUID?
+    let model: AppModel
+
+    func dropEntered(info _: DropInfo) {
+        if let dragging = draggingID {
+            model.movePage(id: dragging, before: targetID)
+        }
+    }
+
+    func dropUpdated(info _: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func performDrop(info _: DropInfo) -> Bool {
+        draggingID = nil
+        return true
+    }
+}
+
+// MARK: - Page cell
+
+struct PageCell: View {
+    let page: PageItem
+    let number: Int
+    /// Recto/Verso caption during a duplex capture; nil = the usual "Page N".
+    var kindLabel: String? = nil
+    let onDelete: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        VStack(spacing: 6) {
+            ZStack(alignment: .topTrailing) {
+                Group {
+                    if let thumb = page.thumbnail {
+                        Image(nsImage: thumb)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                    } else {
+                        Image(systemName: "doc")
+                            .font(.largeTitle)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .frame(maxWidth: .infinity, minHeight: 160, maxHeight: 200)
+                .background(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .strokeBorder(.separator, lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.15), radius: 3, y: 1)
+
+                if hovering {
+                    Button(action: onDelete) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title3)
+                            .foregroundStyle(.white, .red)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(6)
+                    .help("Remove this page")
+                    .hoverHighlight(scale: 1.15)
+                }
+            }
+            Group {
+                if let kindLabel {
+                    Text(verbatim: "\(kindLabel) · \(page.mmSize) · \(page.sizeLabel)")
+                        .fontWeight(.medium)
+                } else {
+                    Text("Page \(number) · \(page.mmSize) · \(page.sizeLabel)")
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+        }
+        .onHover { hovering = $0 }
+        .contextMenu {
+            Button("Remove Page", role: .destructive, action: onDelete)
+        }
+    }
+}

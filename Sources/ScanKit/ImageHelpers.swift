@@ -45,10 +45,6 @@ public extension Pipeline.GrayImage {
         }
         return Pipeline.GrayImage(width: cw, height: ch, pixels: out)
     }
-
-    func jpegData(quality: Double = 0.7, dpi: Int) -> Data? {
-        cgImage.flatMap { ImageEncode.jpeg($0, quality: quality, dpi: dpi) }
-    }
 }
 
 public extension Pipeline {
@@ -88,6 +84,19 @@ public extension Pipeline {
                 provider: provider, decode: nil,
                 shouldInterpolate: true, intent: .defaultIntent
             )
+        }
+
+        /// Rec.601 luminance copy, so crop analysis can run on colour scans
+        /// without decoding the source file a second time.
+        public func grayscale() -> Pipeline.GrayImage {
+            var out = [UInt8](repeating: 0, count: width * height)
+            for i in 0..<(width * height) {
+                let r = Double(pixels[i * 4])
+                let g = Double(pixels[i * 4 + 1])
+                let b = Double(pixels[i * 4 + 2])
+                out[i] = UInt8((0.299 * r + 0.587 * g + 0.114 * b).rounded())
+            }
+            return Pipeline.GrayImage(width: width, height: height, pixels: out)
         }
     }
 

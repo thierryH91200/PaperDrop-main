@@ -106,7 +106,7 @@ public protocol ScannerBackend {
     func scanBatch(
         with scanner: ScannerInfo, config: ScanConfig,
         to directory: URL,
-        onPage: @escaping @Sendable (URL) async -> Void
+        onPage: @escaping @Sendable (URL) async throws -> Void
     ) async throws -> [URL]
     /// Cancel a running scan, recovering the device if needed.
     /// Returns true when the device is believed healthy afterwards.
@@ -116,10 +116,10 @@ public protocol ScannerBackend {
 public extension ScannerBackend {
     func scanBatch(
         with scanner: ScannerInfo, config: ScanConfig, to directory: URL,
-        onPage: @escaping @Sendable (URL) async -> Void
+        onPage: @escaping @Sendable (URL) async throws -> Void
     ) async throws -> [URL] {
         let url = try await scan(with: scanner, config: config, to: directory)
-        await onPage(url)
+        try await onPage(url)
         return [url]
     }
 

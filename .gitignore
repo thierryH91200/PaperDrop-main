@@ -7,5 +7,6 @@ PaperDrop.dmg
 Vendor/
 # Derived from project.yml via `xcodegen generate` — never committed.
 PaperDrop.xcodeproj/
-# XcodeGen writes the app Info.plist here.
-PaperDrop/
+# XcodeGen writes the app Info.plist into the top-level PaperDrop/ dir only.
+# Anchored to the repo root so it does NOT match Sources/PaperDrop/.
+/PaperDrop/

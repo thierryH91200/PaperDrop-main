@@ -1,0 +1,924 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%@ dpi" : {},
+    "%@ pages" : {},
+    "%lld dpi" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld ppp"
+          }
+        }
+      }
+    },
+    "%lld pages" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld pages"
+          }
+        }
+      }
+    },
+    "1 page" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 page"
+          }
+        }
+      }
+    },
+    "Add an invisible, searchable text layer" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter un calque de texte invisible et recherchable"
+          }
+        }
+      }
+    },
+    "Archive folder" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dossier d'archivage"
+          }
+        }
+      }
+    },
+    "Assembling PDF (OCR)…" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Assemblage du PDF (OCR)…"
+          }
+        }
+      }
+    },
+    "Assembling PDF…" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Assemblage du PDF…"
+          }
+        }
+      }
+    },
+    "Auto size" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taille auto"
+          }
+        }
+      }
+    },
+    "Automatic" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatique"
+          }
+        }
+      }
+    },
+    "Backs →" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Versos →"
+          }
+        }
+      }
+    },
+    "Cancel" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annuler"
+          }
+        }
+      }
+    },
+    "Cancel Scan" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annuler la numérisation"
+          }
+        }
+      }
+    },
+    "Cancelled. If the next scan looks corrupted, unplug and replug the scanner." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annulé. Si la prochaine numérisation semble corrompue, débranchez puis rebranchez le scanner."
+          }
+        }
+      }
+    },
+    "Cancelling — resetting scanner…" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annulation — réinitialisation du scanner…"
+          }
+        }
+      }
+    },
+    "Cannot build 1-bit image" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de construire l'image 1 bit"
+          }
+        }
+      }
+    },
+    "Cannot build image for OCR" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de construire l'image pour l'OCR"
+          }
+        }
+      }
+    },
+    "Cannot read image %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de lire l'image %@"
+          }
+        }
+      }
+    },
+    "Check it's connected and powered on" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vérifiez qu'il est connecté et allumé"
+          }
+        }
+      }
+    },
+    "Choose a scanner in the panel" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisissez un scanner dans le panneau"
+          }
+        }
+      }
+    },
+    "Choose…" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisir…"
+          }
+        }
+      }
+    },
+    "Color" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Couleur"
+          }
+        }
+      }
+    },
+    "Could not open scanner session: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible d'ouvrir la session du scanner : %@"
+          }
+        }
+      }
+    },
+    "Discard" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tout supprimer"
+          }
+        }
+      }
+    },
+    "Document" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Document"
+          }
+        }
+      }
+    },
+    "Document name" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nom du document"
+          }
+        }
+      }
+    },
+    "Feeder" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chargeur"
+          }
+        }
+      }
+    },
+    "Flatbed" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vitre"
+          }
+        }
+      }
+    },
+    "Flip the stack, scan, then Save PDF." : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retournez la pile, numérisez, puis Enregistrer le PDF."
+          }
+        }
+      }
+    },
+    "Folder" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dossier"
+          }
+        }
+      }
+    },
+    "Format" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Format"
+          }
+        }
+      }
+    },
+    "Grayscale" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Niveaux de gris"
+          }
+        }
+      }
+    },
+    "JPEG encode failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Échec de l'encodage JPEG"
+          }
+        }
+      }
+    },
+    "Landscape" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paysage"
+          }
+        }
+      }
+    },
+    "Load the stack in the feeder." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chargez la pile dans le chargeur."
+          }
+        }
+      }
+    },
+    "Looking for scanners…" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recherche de scanners…"
+          }
+        }
+      }
+    },
+    "Mode" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mode"
+          }
+        }
+      }
+    },
+    "Mode, resolution, paper size and orientation" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mode, résolution, format et orientation"
+          }
+        }
+      }
+    },
+    "No file produced" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun fichier produit"
+          }
+        }
+      }
+    },
+    "No scanner found" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun scanner trouvé"
+          }
+        }
+      }
+    },
+    "No scanners" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aucun scanner"
+          }
+        }
+      }
+    },
+    "Now scan the backs" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Numérisez les versos"
+          }
+        }
+      }
+    },
+    "OCR" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OCR"
+          }
+        }
+      }
+    },
+    "Orientation" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Orientation"
+          }
+        }
+      }
+    },
+    "PDF" : {},
+    "Page %@ · %@ · %@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Page %1$@ · %2$@ · %3$@"
+          }
+        }
+      }
+    },
+    "Page %lld · %@ · %@" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Page %1$lld · %2$@ · %3$@"
+          }
+        }
+      }
+    },
+    "Page %lld: %@, %@" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Page %1$lld : %2$@, %3$@"
+          }
+        }
+      }
+    },
+    "Paper" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Papier"
+          }
+        }
+      }
+    },
+    "PaperDrop" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "PaperDrop"
+          }
+        }
+      }
+    },
+    "Place a document on the scanner" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Placez un document sur le scanner"
+          }
+        }
+      }
+    },
+    "Portrait" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Portrait"
+          }
+        }
+      }
+    },
+    "Recto %lld" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recto %lld"
+          }
+        }
+      }
+    },
+    "Remove Page" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer la page"
+          }
+        }
+      }
+    },
+    "Remove this page" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer cette page"
+          }
+        }
+      }
+    },
+    "Resolution" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Résolution"
+          }
+        }
+      }
+    },
+    "Save PDF" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistrer le PDF"
+          }
+        }
+      }
+    },
+    "Save PDF…" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistrer le PDF…"
+          }
+        }
+      }
+    },
+    "Saved %@ (%lld KB)" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistré %1$@ (%2$lld Ko)"
+          }
+        }
+      }
+    },
+    "Scan First Page" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Numériser la première page"
+          }
+        }
+      }
+    },
+    "Scan Next Page" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Numériser la page suivante"
+          }
+        }
+      }
+    },
+    "Scan Page" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Numériser la page"
+          }
+        }
+      }
+    },
+    "Scan Settings" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réglages de numérisation"
+          }
+        }
+      }
+    },
+    "Scan cancelled" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Numérisation annulée"
+          }
+        }
+      }
+    },
+    "Scan failed: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Échec de la numérisation : %@"
+          }
+        }
+      }
+    },
+    "Scan the fronts" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Numérisez les rectos"
+          }
+        }
+      }
+    },
+    "Scanner" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scanner"
+          }
+        }
+      }
+    },
+    "Scanner disconnected" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scanner déconnecté"
+          }
+        }
+      }
+    },
+    "Scanning page %lld…" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Numérisation de la page %lld…"
+          }
+        }
+      }
+    },
+    "Scanning…" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Numérisation…"
+          }
+        }
+      }
+    },
+    "Search Again" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rechercher à nouveau"
+          }
+        }
+      }
+    },
+    "Searching…" : {
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recherche…"
+          }
+        }
+      }
+    },
+    "Snap to standard sizes" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajuster aux formats standard"
+          }
+        }
+      }
+    },
+    "Source" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Source"
+          }
+        }
+      }
+    },
+    "TIFF encode failed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Échec de l'encodage TIFF"
+          }
+        }
+      }
+    },
+    "Two-sided (recto/verso)" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recto-verso"
+          }
+        }
+      }
+    },
+    "Uniform pages" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pages uniformes"
+          }
+        }
+      }
+    },
+    "Verso %lld" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verso %lld"
+          }
+        }
+      }
+    },
+    "no HTTP response from scanner" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "aucune réponse HTTP du scanner"
+          }
+        }
+      }
+    },
+    "scan did not run" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "la numérisation n'a pas démarré"
+          }
+        }
+      }
+    },
+    "scanimage produced no file" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "scanimage n'a produit aucun fichier"
+          }
+        }
+      }
+    },
+    "scanner busy" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "scanner occupé"
+          }
+        }
+      }
+    },
+    "scanner did not return capabilities" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "le scanner n'a pas renvoyé ses capacités"
+          }
+        }
+      }
+    },
+    "scanner produced no page" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "le scanner n'a produit aucune page"
+          }
+        }
+      }
+    },
+    "scanner rejected the scan settings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "le scanner a refusé les réglages de numérisation"
+          }
+        }
+      }
+    },
+    "scanner returned HTTP %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "le scanner a renvoyé HTTP %lld"
+          }
+        }
+      }
+    },
+    "scanner returned no job location" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "le scanner n'a pas renvoyé l'emplacement du travail"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}
