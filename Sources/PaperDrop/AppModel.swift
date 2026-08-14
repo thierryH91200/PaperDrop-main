@@ -184,6 +184,12 @@ final class AppModel: ObservableObject {
                         url: url, dpi: config.dpi, mode: mode, snap: snap, fixed: fixed
                     )
                 }
+                // Duplex: once the fronts are captured, move straight to the
+                // backs so a single scan button drives the whole flow (no
+                // separate "Backs →" step).
+                if duplex, duplexStage == .fronts, !pages.isEmpty {
+                    duplexProceedToBacks()
+                }
             } catch {
                 if case ScanError.cancelled = error {
                     self.statusText = String(localized: "Scan cancelled")

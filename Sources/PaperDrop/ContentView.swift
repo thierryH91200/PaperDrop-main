@@ -193,13 +193,8 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
                 }
                 Spacer()
-                // Only the fronts→backs step needs a button; saving does the
-                // interleave automatically at the end.
-                if fronts {
-                    Button("Backs →") { model.duplexProceedToBacks() }
-                        .disabled(model.pages.isEmpty || model.busy)
-                        .hoverHighlight()
-                }
+                // No action button here: scanning the fronts advances to the
+                // backs automatically, and Save does the final interleave.
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
