@@ -293,14 +293,23 @@ public final class ESCLBackend: NSObject, ScannerBackend, URLSessionDelegate, @u
     /// True when the document feeder is loaded (paper present) per the
     /// scanner's status, so the scan should pull from the feeder.
     private func adfLoaded(_ base: URL) async -> Bool {
-        guard
-            let (data, resp) = try? await session.data(
-                from: base.appendingPathComponent("ScannerStatus")
-            ),
-            (resp as? HTTPURLResponse)?.statusCode == 200,
-            let xml = String(data: data, encoding: .utf8)
-        else { return false }
-        return xml.contains("ScannerAdfLoaded")
+        // A scanner that just woke (typical on the app's first launch) can
+        // report a stale "empty" AdfState on the first query, which made
+        // .auto wrongly fall back to the flatbed. Poll a few times and take
+        // the first "loaded" answer; a genuinely empty feeder simply never
+        // reports loaded and we fall through to false after ~1s.
+        let url = base.appendingPathComponent("ScannerStatus")
+        for attempt in 0..<3 {
+            if let (data, resp) = try? await session.data(from: url),
+                (resp as? HTTPURLResponse)?.statusCode == 200,
+                let xml = String(data: data, encoding: .utf8),
+                xml.contains("ScannerAdfLoaded")
+            {
+                return true
+            }
+            if attempt < 2 { try? await Task.sleep(nanoseconds: 500_000_000) }
+        }
+        return false
     }
 
     // MARK: - Helpers
