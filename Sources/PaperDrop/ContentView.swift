@@ -44,12 +44,21 @@ struct ContentView: View {
             sidebar
             Divider()
             VStack(spacing: 0) {
-                if model.duplex && !model.duplexMerged { duplexBanner }
-                if model.pages.isEmpty {
-                    emptyState
-                } else {
-                    pageGrid
+                VStack(spacing: 0) {
+                    // A fixed-height top bar, always present so toggling
+                    // Recto-verso never shifts the layout. It carries the
+                    // duplex guidance when active, and is empty otherwise.
+                    topBar
+                    Divider()
+                    if model.pages.isEmpty {
+                        emptyState
+                    } else {
+                        pageGrid
+                    }
                 }
+                // Match the panel's top inset so the title-bar strip stays
+                // clear at the very top of the window.
+                .padding(.top, 40)
                 statusBar
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -171,35 +180,35 @@ struct ContentView: View {
         .frame(width: 260)
     }
 
-    // MARK: Duplex guidance banner
+    // MARK: Top bar (fixed height; duplex guidance when active)
+
+    private static let topBarHeight: CGFloat = 38
 
     @ViewBuilder
-    private var duplexBanner: some View {
+    private var topBar: some View {
+        let duplex = model.duplex && !model.duplexMerged
         let fronts = model.duplexStage == .fronts
-        VStack(spacing: 0) {
-            HStack(spacing: 12) {
+        HStack(spacing: 9) {
+            if duplex {
                 Image(systemName: fronts ? "1.circle.fill" : "2.circle.fill")
-                    .font(.title2)
                     .foregroundStyle(.tint)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(fronts ? "Scan the fronts" : "Now scan the backs")
-                        .fontWeight(.medium)
-                    Text(
-                        fronts
-                            ? "Load the stack in the feeder."
-                            : "Flip the stack, scan, then Save PDF."
-                    )
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                }
-                Spacer()
-                // No action button here: scanning the fronts advances to the
-                // backs automatically, and Save does the final interleave.
+                Text(fronts ? "Scan the fronts" : "Now scan the backs")
+                    .fontWeight(.medium)
+                Text(verbatim: "·").foregroundStyle(.secondary)
+                Text(
+                    fronts
+                        ? "Load the stack in the feeder."
+                        : "Flip the stack, scan, then Save PDF."
+                )
+                .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(.tint.opacity(0.10))
-            Divider()
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 16)
+        .frame(height: Self.topBarHeight)
+        .frame(maxWidth: .infinity)
+        .background {
+            if duplex { Color.accentColor.opacity(0.10) }
         }
     }
 
