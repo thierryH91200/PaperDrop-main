@@ -1,10 +1,14 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "%@ dpi" : {},
-    "%@ pages" : {},
+    "%@ dpi" : {
+      "extractionState" : "manual"
+    },
+    "%@ pages" : {
+      "extractionState" : "manual"
+    },
     "%lld dpi" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -15,7 +19,7 @@
       }
     },
     "%lld pages" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -26,6 +30,7 @@
       }
     },
     "1 page" : {
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -36,7 +41,7 @@
       }
     },
     "Add an invisible, searchable text layer" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -47,7 +52,7 @@
       }
     },
     "Archive folder" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -58,7 +63,7 @@
       }
     },
     "Assembling PDF (OCR)…" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -69,7 +74,7 @@
       }
     },
     "Assembling PDF…" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -80,6 +85,7 @@
       }
     },
     "Auto size" : {
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -90,7 +96,7 @@
       }
     },
     "Automatic" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -101,7 +107,7 @@
       }
     },
     "Backs →" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -112,7 +118,7 @@
       }
     },
     "Cancel" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -123,7 +129,7 @@
       }
     },
     "Cancel Scan" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -134,7 +140,7 @@
       }
     },
     "Cancelled. If the next scan looks corrupted, unplug and replug the scanner." : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -145,7 +151,7 @@
       }
     },
     "Cancelling — resetting scanner…" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -189,6 +195,7 @@
       }
     },
     "Check it's connected and powered on" : {
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -199,6 +206,7 @@
       }
     },
     "Choose a scanner in the panel" : {
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -209,7 +217,7 @@
       }
     },
     "Choose…" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -220,6 +228,7 @@
       }
     },
     "Color" : {
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -241,6 +250,7 @@
       }
     },
     "Discard" : {
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -251,6 +261,7 @@
       }
     },
     "Document" : {
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -261,7 +272,7 @@
       }
     },
     "Document name" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -272,7 +283,7 @@
       }
     },
     "Feeder" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -283,7 +294,7 @@
       }
     },
     "Flatbed" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -294,6 +305,7 @@
       }
     },
     "Flip the stack, scan, then Save PDF." : {
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -304,7 +316,7 @@
       }
     },
     "Folder" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -315,7 +327,7 @@
       }
     },
     "Format" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -326,6 +338,7 @@
       }
     },
     "Grayscale" : {
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -347,6 +360,7 @@
       }
     },
     "Landscape" : {
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -357,7 +371,7 @@
       }
     },
     "Load the stack in the feeder." : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -368,6 +382,7 @@
       }
     },
     "Looking for scanners…" : {
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -378,7 +393,7 @@
       }
     },
     "Mode" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -389,7 +404,7 @@
       }
     },
     "Mode, resolution, paper size and orientation" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -411,6 +426,7 @@
       }
     },
     "No scanner found" : {
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -421,6 +437,7 @@
       }
     },
     "No scanners" : {
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -431,7 +448,7 @@
       }
     },
     "Now scan the backs" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -442,7 +459,7 @@
       }
     },
     "OCR" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -453,7 +470,7 @@
       }
     },
     "Orientation" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -463,8 +480,11 @@
         }
       }
     },
-    "PDF" : {},
+    "PDF" : {
+      "extractionState" : "manual"
+    },
     "Page %@ · %@ · %@" : {
+      "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -475,7 +495,7 @@
       }
     },
     "Page %lld · %@ · %@" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -486,7 +506,7 @@
       }
     },
     "Page %lld: %@, %@" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -497,7 +517,7 @@
       }
     },
     "Paper" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -508,7 +528,7 @@
       }
     },
     "PaperDrop" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -519,6 +539,7 @@
       }
     },
     "Place a document on the scanner" : {
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -529,6 +550,7 @@
       }
     },
     "Portrait" : {
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -539,7 +561,7 @@
       }
     },
     "Recto %lld" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -550,7 +572,7 @@
       }
     },
     "Remove Page" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -561,7 +583,7 @@
       }
     },
     "Remove this page" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -572,7 +594,7 @@
       }
     },
     "Resolution" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -583,7 +605,7 @@
       }
     },
     "Save PDF" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -594,7 +616,7 @@
       }
     },
     "Save PDF…" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -605,7 +627,7 @@
       }
     },
     "Saved %@ (%lld KB)" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -616,7 +638,7 @@
       }
     },
     "Scan First Page" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -627,6 +649,7 @@
       }
     },
     "Scan Next Page" : {
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -637,7 +660,7 @@
       }
     },
     "Scan Page" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -648,6 +671,7 @@
       }
     },
     "Scan Settings" : {
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -658,7 +682,7 @@
       }
     },
     "Scan cancelled" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -680,7 +704,7 @@
       }
     },
     "Scan the fronts" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -691,7 +715,7 @@
       }
     },
     "Scanner" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -713,7 +737,7 @@
       }
     },
     "Scanning page %lld…" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -724,6 +748,7 @@
       }
     },
     "Scanning…" : {
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -734,7 +759,7 @@
       }
     },
     "Search Again" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -745,6 +770,7 @@
       }
     },
     "Searching…" : {
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -755,7 +781,7 @@
       }
     },
     "Snap to standard sizes" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -766,7 +792,7 @@
       }
     },
     "Source" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -788,7 +814,7 @@
       }
     },
     "Two-sided (recto/verso)" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -799,7 +825,7 @@
       }
     },
     "Uniform pages" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
@@ -810,7 +836,7 @@
       }
     },
     "Verso %lld" : {
-      "extractionState" : "stale",
+      "extractionState" : "manual",
       "localizations" : {
         "fr" : {
           "stringUnit" : {
