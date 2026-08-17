@@ -86,9 +86,10 @@ public final class ESCLBackend: NSObject, ScannerBackend, URLSessionDelegate, @u
     public func scan(
         with scanner: ScannerInfo, config: ScanConfig, to directory: URL
     ) async throws -> URL {
+        // One page only — never drain a loaded feeder for a single scan.
         guard
             let first = try await scanBatch(
-                with: scanner, config: config, to: directory, onPage: { _ in }
+                with: scanner, config: config, to: directory, maxPages: 1, onPage: { _ in }
             ).first
         else { throw ScanError.scanFailed(String(localized: "scanner produced no page")) }
         return first
@@ -100,6 +101,7 @@ public final class ESCLBackend: NSObject, ScannerBackend, URLSessionDelegate, @u
     /// is handed to `onPage` immediately so the UI can show it right away.
     public func scanBatch(
         with scanner: ScannerInfo, config: ScanConfig, to directory: URL,
+        maxPages: Int = .max,
         onPage: @escaping @Sendable (URL) async throws -> Void
     ) async throws -> [URL] {
         guard let base = Self.baseURL(from: scanner.id) else { throw ScanError.noDevice }
@@ -149,7 +151,9 @@ public final class ESCLBackend: NSObject, ScannerBackend, URLSessionDelegate, @u
         var pages: [URL] = []
         let stamp = Int(Date().timeIntervalSince1970)
         var waited = 0.0
-        loop: while pages.count < 500 {
+        var finished = false
+        let cap = min(maxPages, 500)
+        loop: while pages.count < cap {
             switch try await nextDocument(job) {
             case let .page(data):
                 let out = directory.appendingPathComponent("escl-\(stamp)-\(pages.count).jpg")
@@ -165,9 +169,13 @@ public final class ESCLBackend: NSObject, ScannerBackend, URLSessionDelegate, @u
                 waited += wait
                 try await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000))
             case .done:
+                finished = true
                 break loop
             }
         }
+        // Stopped before the job drained (a preview's one-page limit, or the
+        // safety cap): cancel it so the scanner doesn't hold the rest.
+        if !finished { await cancelJob(job) }
         guard !pages.isEmpty else {
             throw ScanError.scanFailed(String(localized: "scanner produced no page"))
         }
@@ -178,10 +186,15 @@ public final class ESCLBackend: NSObject, ScannerBackend, URLSessionDelegate, @u
 
     public func cancelScan(scannerName _: String) async -> Bool {
         guard let job = withJobLock({ currentJob }) else { return true }
+        await cancelJob(job)
+        return true
+    }
+
+    /// DELETE a job so the scanner stops feeding and returns to Idle.
+    private func cancelJob(_ job: URL) async {
         var req = URLRequest(url: job)
         req.httpMethod = "DELETE"
         _ = try? await session.data(for: req)
-        return true
     }
 
     // MARK: - eSCL requests

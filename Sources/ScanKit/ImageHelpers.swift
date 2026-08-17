@@ -45,6 +45,11 @@ public extension Pipeline.GrayImage {
         }
         return Pipeline.GrayImage(width: cw, height: ch, pixels: out)
     }
+
+    /// Apply a tone curve (from Pipeline.toneLUT) to every pixel.
+    func toneMapped(_ lut: [UInt8]) -> Pipeline.GrayImage {
+        Pipeline.GrayImage(width: width, height: height, pixels: pixels.map { lut[Int($0)] })
+    }
 }
 
 public extension Pipeline {
@@ -86,6 +91,19 @@ public extension Pipeline {
             )
         }
 
+        /// Apply a tone curve (from Pipeline.toneLUT) to R, G and B.
+        public func toneMapped(_ lut: [UInt8]) -> ColorImage {
+            var px = pixels
+            var i = 0
+            while i < px.count {
+                px[i] = lut[Int(px[i])]
+                px[i + 1] = lut[Int(px[i + 1])]
+                px[i + 2] = lut[Int(px[i + 2])]
+                i += 4
+            }
+            return ColorImage(width: width, height: height, pixels: px)
+        }
+
         /// Rec.601 luminance copy, so crop analysis can run on colour scans
         /// without decoding the source file a second time.
         public func grayscale() -> Pipeline.GrayImage {
@@ -97,6 +115,20 @@ public extension Pipeline {
                 out[i] = UInt8((0.299 * r + 0.587 * g + 0.114 * b).rounded())
             }
             return Pipeline.GrayImage(width: width, height: height, pixels: out)
+        }
+    }
+
+    /// A 256-entry tone curve combining brightness (additive, −0.5…0.5),
+    /// contrast (multiplicative around mid, 1 = none) and gamma (1 = none).
+    /// Returns nil when all three are neutral, so callers can skip the pass.
+    static func toneLUT(brightness: Double, contrast: Double, gamma: Double) -> [UInt8]? {
+        guard brightness != 0 || contrast != 1 || gamma != 1 else { return nil }
+        return (0..<256).map { i in
+            var v = Double(i) / 255
+            v = (v - 0.5) * contrast + 0.5 + brightness
+            v = min(1, max(0, v))
+            if gamma != 1 { v = pow(v, 1 / gamma) }
+            return UInt8((min(1, max(0, v)) * 255).rounded())
         }
     }
 

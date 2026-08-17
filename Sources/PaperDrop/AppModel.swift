@@ -45,6 +45,21 @@ final class AppModel: ObservableObject {
     @AppStorage("paperSnap") var paperSnap = true
     @AppStorage("uniformPages") var uniformPages = true
     @AppStorage("paperChoice") var paperChoice = "auto"
+
+    // Advanced image adjustments, applied to the pixels after scanning.
+    @AppStorage("brightness") var brightness = 0.0  // −0.5 … 0.5
+    @AppStorage("contrast") var contrast = 1.0  // 0.5 … 2.0
+    @AppStorage("gamma") var gamma = 1.0  // 0.4 … 2.5
+
+    var hasImageAdjustments: Bool {
+        brightness != 0 || contrast != 1 || gamma != 1
+    }
+
+    func resetImageAdjustments() {
+        brightness = 0
+        contrast = 1
+        gamma = 1
+    }
     @AppStorage("paperLandscape") var paperLandscape = false
 
     /// Toolbar paper choices, derived from Pipeline's tables so paper
@@ -88,12 +103,67 @@ final class AppModel: ObservableObject {
     }
 
     var busy: Bool {
-        scanning || saving
+        scanning || saving || previewing
     }
 
     private func backend(for scanner: ScannerInfo) -> ScannerBackend {
         if scanner.id.hasPrefix("escl:") { return esclBackend }
         return scanner.id.hasPrefix("sane:") ? saneBackend : iccBackend
+    }
+
+    // MARK: Adjustable preview
+
+    /// A low-resolution flatbed scan kept in memory so brightness/contrast/
+    /// gamma can be tuned live before committing to a full scan.
+    @Published var previewing = false
+    @Published var previewImage: NSImage?
+    private var previewRaw: Pipeline.ColorImage?
+
+    var hasPreview: Bool { previewImage != nil }
+
+    /// Grab a quick low-res colour preview of the flatbed.
+    func acquirePreview() {
+        guard let scanner = selectedScanner, !busy else { return }
+        previewing = true
+        errorText = nil
+        statusText = String(localized: "Previewing…")
+        let backend = backend(for: scanner)
+        // Follow the chosen source (a feeder preview consumes one sheet;
+        // scan() returns a single page, never draining the stack).
+        let config = ScanConfig(dpi: 100, mode: .color, source: scanSource)
+        Task {
+            do {
+                try FileManager.default.createDirectory(
+                    at: workDir, withIntermediateDirectories: true
+                )
+                let url = try await backend.scan(with: scanner, config: config, to: workDir)
+                let raw = try Pipeline.loadColor(url)
+                try? FileManager.default.removeItem(at: url)
+                self.previewRaw = raw
+                self.refreshPreview()
+                self.statusText = ""
+            } catch {
+                self.errorText = error.localizedDescription
+                self.statusText = ""
+            }
+            self.previewing = false
+        }
+    }
+
+    /// Re-apply the current tone curve to the stored raw preview.
+    func refreshPreview() {
+        guard let raw = previewRaw else {
+            previewImage = nil
+            return
+        }
+        let lut = Pipeline.toneLUT(brightness: brightness, contrast: contrast, gamma: gamma)
+        let shown = lut.map { raw.toneMapped($0) } ?? raw
+        previewImage = shown.cgImage.map { NSImage(cgImage: $0, size: .zero) }
+    }
+
+    func clearPreview() {
+        previewRaw = nil
+        previewImage = nil
     }
 
     // MARK: Discovery
@@ -159,6 +229,7 @@ final class AppModel: ObservableObject {
 
     func scanPage() {
         guard let scanner = selectedScanner, !busy else { return }
+        clearPreview()
         scanning = true
         errorText = nil
         statusText = String(localized: "Scanning page \(pages.count + 1)…")
@@ -170,6 +241,7 @@ final class AppModel: ObservableObject {
         let mode = outputMode
         let snap = paperSnap
         let fixed = fixedPaperMM
+        let tone = Pipeline.toneLUT(brightness: brightness, contrast: contrast, gamma: gamma)
         Task {
             do {
                 try FileManager.default.createDirectory(
@@ -178,10 +250,11 @@ final class AppModel: ObservableObject {
                 // A loaded feeder yields the whole stack, the flatbed one
                 // page; each page is shown the moment it's scanned.
                 _ = try await backend.scanBatch(
-                    with: scanner, config: config, to: workDir
+                    with: scanner, config: config, to: workDir, maxPages: .max
                 ) { url in
                     try await self.appendScanned(
-                        url: url, dpi: config.dpi, mode: mode, snap: snap, fixed: fixed
+                        url: url, dpi: config.dpi, mode: mode, snap: snap,
+                        fixed: fixed, tone: tone
                     )
                 }
                 // Duplex: once the fronts are captured, move straight to the
@@ -205,12 +278,13 @@ final class AppModel: ObservableObject {
     /// Process one just-scanned file and append it to the page list. Runs the
     /// heavy image work off the main actor, then hops back to update the UI.
     private func appendScanned(
-        url: URL, dpi: Int, mode: OutputMode, snap: Bool, fixed: (w: Double, h: Double)?
+        url: URL, dpi: Int, mode: OutputMode, snap: Bool,
+        fixed: (w: Double, h: Double)?, tone: [UInt8]?
     ) async throws {
         // Let a failure propagate and stop the scan: silently dropping a page
         // would desync the recto/verso counts and corrupt a duplex merge.
         let item = try await Self.process(
-            url: url, dpi: dpi, mode: mode, snap: snap, fixed: fixed
+            url: url, dpi: dpi, mode: mode, snap: snap, fixed: fixed, tone: tone
         )
         pages.append(item)
         statusText = String(
@@ -221,7 +295,8 @@ final class AppModel: ObservableObject {
     nonisolated static func process(
         url: URL, dpi: Int, mode: OutputMode,
         snap: Bool,
-        fixed: (w: Double, h: Double)? = nil
+        fixed: (w: Double, h: Double)? = nil,
+        tone: [UInt8]? = nil
     )
         async throws -> PageItem
     {
@@ -229,9 +304,12 @@ final class AppModel: ObservableObject {
         defer { try? FileManager.default.removeItem(at: url) }
 
         // Colour keeps the RGB pixels; the crop analysis then works on a
-        // luminance copy of them, so the file is decoded only once.
-        let color = mode == .color ? try Pipeline.loadColor(url) : nil
-        let gray = try color?.grayscale() ?? Pipeline.loadGray(url)
+        // luminance copy of them, so the file is decoded only once. Brightness/
+        // contrast/gamma (tone) are applied here, before crop and encode.
+        var color = mode == .color ? try Pipeline.loadColor(url) : nil
+        if let tone { color = color?.toneMapped(tone) }
+        var gray = try color?.grayscale() ?? Pipeline.loadGray(url)
+        if let tone, color == nil { gray = gray.toneMapped(tone) }
 
         let slack = snap ? 25.0 : 0
 

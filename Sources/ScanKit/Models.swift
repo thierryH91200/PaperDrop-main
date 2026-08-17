@@ -105,7 +105,7 @@ public protocol ScannerBackend {
     /// without feeder support get the default below.
     func scanBatch(
         with scanner: ScannerInfo, config: ScanConfig,
-        to directory: URL,
+        to directory: URL, maxPages: Int,
         onPage: @escaping @Sendable (URL) async throws -> Void
     ) async throws -> [URL]
     /// Cancel a running scan, recovering the device if needed.
@@ -116,6 +116,7 @@ public protocol ScannerBackend {
 public extension ScannerBackend {
     func scanBatch(
         with scanner: ScannerInfo, config: ScanConfig, to directory: URL,
+        maxPages _: Int = .max,
         onPage: @escaping @Sendable (URL) async throws -> Void
     ) async throws -> [URL] {
         let url = try await scan(with: scanner, config: config, to: directory)

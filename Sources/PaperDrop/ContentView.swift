@@ -38,6 +38,8 @@ extension ScanSource {
 
 struct ContentView: View {
     @EnvironmentObject var model: AppModel
+    /// 0 = General settings, 1 = Advanced (image adjustments).
+    @State private var settingsTab = 0
 
     var body: some View {
         HStack(spacing: 0) {
@@ -50,10 +52,12 @@ struct ContentView: View {
                     // duplex guidance when active, and is empty otherwise.
                     topBar
                     Divider()
-                    if model.pages.isEmpty {
-                        emptyState
-                    } else {
+                    if !model.pages.isEmpty {
                         pageGrid
+                    } else if model.hasPreview || model.previewing {
+                        previewView
+                    } else {
+                        emptyState
                     }
                 }
                 // Match the panel's top inset so the title-bar strip stays
@@ -76,6 +80,7 @@ struct ContentView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 2)
             Form {
+                // Device stays visible above the tab switch.
                 Section {
                     Picker("Scanner", selection: $model.selectedScannerID) {
                         if model.scanners.isEmpty {
@@ -94,65 +99,17 @@ struct ContentView: View {
                     .disabled(model.discovering)
                 }
 
-                Picker("Source", selection: $model.scanSource) {
-                    ForEach(ScanSource.allCases, id: \.self) { src in
-                        Text(src.label).tag(src)
-                    }
+                Picker("", selection: $settingsTab) {
+                    Text("General").tag(0)
+                    Text("Advanced").tag(1)
                 }
-                Toggle(
-                    "Two-sided (recto/verso)",
-                    isOn: Binding(
-                        get: { model.duplex },
-                        set: { on in
-                            model.duplex = on
-                            if !on { model.resetDuplexStaging() }
-                        }
-                    ))
-                Picker("Mode", selection: $model.outputMode) {
-                    Text("Document").tag(OutputMode.document)
-                    Text("Grayscale").tag(OutputMode.grayscale)
-                    Text("Color").tag(OutputMode.color)
-                }
-                Picker("Resolution", selection: $model.dpi) {
-                    ForEach(model.availableDPIs, id: \.self) { d in
-                        Text("\(d) dpi").tag(d)
-                    }
-                }
-                Picker("Paper", selection: $model.paperChoice) {
-                    Text("Auto size").tag("auto")
-                    ForEach(AppModel.fixedPapers, id: \.key) { paper in
-                        Text(paper.label).tag(paper.key)
-                    }
-                }
-                // Snapping only refines an auto-detected size; with a forced
-                // paper size it has no effect, so hide it entirely then.
-                if model.paperChoice == "auto" {
-                    Toggle("Snap to standard sizes", isOn: $model.paperSnap)
-                }
-                // Orientation only bites alongside a forced paper size;
-                // auto-detect derives it from the page it found.
-                Picker("Orientation", selection: $model.paperLandscape) {
-                    Text("Portrait").tag(false)
-                    Text("Landscape").tag(true)
-                }
-                .disabled(model.fixedPaperMM == nil)
+                .pickerStyle(.segmented)
+                .labelsHidden()
 
-                Section {
-                    LabeledContent("Format") { Text("PDF") }
-                    TextField("Document name", text: $model.docName)
-                        .onSubmit { model.savePDF() }
-                    LabeledContent("Folder") {
-                        HStack(spacing: 6) {
-                            Text(URL(fileURLWithPath: model.archivePath).lastPathComponent)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                                .foregroundStyle(.secondary)
-                            Button("Choose…") { chooseFolder() }
-                        }
-                    }
-                    Toggle("OCR", isOn: $model.ocrEnabled)
-                        .help("Add an invisible, searchable text layer")
-                    Toggle("Uniform pages", isOn: $model.uniformPages)
+                if settingsTab == 0 {
+                    generalTab
+                } else {
+                    advancedTab
                 }
             }
             .formStyle(.grouped)
@@ -179,6 +136,126 @@ struct ContentView: View {
         // Clear the floating toolbar / window controls at the top.
         .padding(.top, 40)
         .frame(width: 260)
+    }
+
+    // MARK: General settings tab
+
+    @ViewBuilder
+    private var generalTab: some View {
+        Picker("Source", selection: $model.scanSource) {
+            ForEach(ScanSource.allCases, id: \.self) { src in
+                Text(src.label).tag(src)
+            }
+        }
+        Toggle(
+            "Two-sided (recto/verso)",
+            isOn: Binding(
+                get: { model.duplex },
+                set: { on in
+                    model.duplex = on
+                    if !on { model.resetDuplexStaging() }
+                }
+            ))
+        Picker("Mode", selection: $model.outputMode) {
+            Text("Document").tag(OutputMode.document)
+            Text("Grayscale").tag(OutputMode.grayscale)
+            Text("Color").tag(OutputMode.color)
+        }
+        Picker("Resolution", selection: $model.dpi) {
+            ForEach(model.availableDPIs, id: \.self) { d in
+                Text("\(d) dpi").tag(d)
+            }
+        }
+        Picker("Paper", selection: $model.paperChoice) {
+            Text("Auto size").tag("auto")
+            ForEach(AppModel.fixedPapers, id: \.key) { paper in
+                Text(paper.label).tag(paper.key)
+            }
+        }
+        // Snapping only refines an auto-detected size; with a forced paper
+        // size it has no effect, so hide it entirely then.
+        if model.paperChoice == "auto" {
+            Toggle("Snap to standard sizes", isOn: $model.paperSnap)
+        }
+        // Orientation only bites alongside a forced paper size; auto-detect
+        // derives it from the page it found.
+        Picker("Orientation", selection: $model.paperLandscape) {
+            Text("Portrait").tag(false)
+            Text("Landscape").tag(true)
+        }
+        .disabled(model.fixedPaperMM == nil)
+
+        Section {
+            LabeledContent("Format") { Text("PDF") }
+            TextField("Document name", text: $model.docName)
+                .onSubmit { model.savePDF() }
+            LabeledContent("Folder") {
+                HStack(spacing: 6) {
+                    Text(URL(fileURLWithPath: model.archivePath).lastPathComponent)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .foregroundStyle(.secondary)
+                    Button("Choose…") { chooseFolder() }
+                }
+            }
+            Toggle("OCR", isOn: $model.ocrEnabled)
+                .help("Add an invisible, searchable text layer")
+            Toggle("Uniform pages", isOn: $model.uniformPages)
+        }
+    }
+
+    // MARK: Advanced settings tab (image adjustments)
+
+    @ViewBuilder
+    private var advancedTab: some View {
+        Section {
+            // Brightness/contrast as percentages (neutral = 0 % / 100 %);
+            // gamma reads more naturally as a plain factor. Each edit also
+            // refreshes the live preview when one is loaded.
+            adjustmentRow("Brightness", value: toneBinding(\.brightness), in: -0.5...0.5) {
+                String(format: "%+.0f %%", $0 * 100)
+            }
+            adjustmentRow("Contrast", value: toneBinding(\.contrast), in: 0.5...2.0) {
+                String(format: "%.0f %%", $0 * 100)
+            }
+            adjustmentRow("Gamma", value: toneBinding(\.gamma), in: 0.4...2.5) {
+                String(format: "%.2f", $0)
+            }
+        }
+        Section {
+            Button("Reset") {
+                model.resetImageAdjustments()
+                model.refreshPreview()
+            }
+            .disabled(!model.hasImageAdjustments)
+        }
+    }
+
+    /// Slider binding that persists the value and refreshes the live preview.
+    private func toneBinding(_ path: ReferenceWritableKeyPath<AppModel, Double>) -> Binding<Double> {
+        Binding(
+            get: { model[keyPath: path] },
+            set: {
+                model[keyPath: path] = $0
+                model.refreshPreview()
+            }
+        )
+    }
+
+    private func adjustmentRow(
+        _ title: LocalizedStringKey, value: Binding<Double>,
+        in range: ClosedRange<Double>, display: @escaping (Double) -> String
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack {
+                Text(title)
+                Spacer()
+                Text(display(value.wrappedValue))
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+            Slider(value: value, in: range)
+        }
     }
 
     // MARK: Top bar (fixed height; duplex guidance when active)
@@ -286,18 +363,35 @@ struct ContentView: View {
             if model.scanning {
                 ProgressView()
                 cancelScanButton("Cancel Scan", large: true)
+            } else if model.previewing {
+                ProgressView()
+                Text("Previewing…").foregroundStyle(.secondary)
             } else {
-                Button(action: model.scanPage) {
-                    Label("Scan First Page", systemImage: "scanner")
-                        .font(.title3)
-                        .padding(.horizontal, 18)
-                        .padding(.vertical, 8)
+                HStack(spacing: 12) {
+                    Button {
+                        model.acquirePreview()
+                    } label: {
+                        Label("Preview", systemImage: "eye")
+                            .font(.title3)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                    }
+                    .controlSize(.large)
+                    .hoverHighlight()
+                    .disabled(model.busy || model.selectedScanner == nil)
+
+                    Button(action: model.scanPage) {
+                        Label("Scan First Page", systemImage: "scanner")
+                            .font(.title3)
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 8)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .hoverHighlight()
+                    .disabled(model.busy || model.selectedScanner == nil)
+                    .keyboardShortcut(.defaultAction)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .hoverHighlight()
-                .disabled(model.busy || model.selectedScanner == nil)
-                .keyboardShortcut(.defaultAction)
             }
             if model.selectedScanner == nil {
                 Text("Choose a scanner in the panel")
@@ -305,6 +399,47 @@ struct ContentView: View {
                     .foregroundStyle(.orange)
             }
         }
+    }
+
+    // MARK: Adjustable preview
+
+    private var previewView: some View {
+        VStack(spacing: 0) {
+            if let img = model.previewImage {
+                Image(nsImage: img)
+                    .resizable()
+                    .interpolation(.medium)
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(20)
+                HStack(spacing: 12) {
+                    Button {
+                        model.acquirePreview()
+                    } label: {
+                        Label("Preview again", systemImage: "arrow.clockwise")
+                    }
+                    .disabled(model.busy)
+                    .hoverHighlight()
+                    Button(action: model.scanPage) {
+                        Label("Scan First Page", systemImage: "scanner")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(model.busy || model.selectedScanner == nil)
+                    .keyboardShortcut(.defaultAction)
+                    .hoverHighlight()
+                    Button("Close") { model.clearPreview() }
+                        .disabled(model.busy)
+                        .hoverHighlight()
+                }
+                .padding(.bottom, 16)
+            } else {
+                Spacer()
+                ProgressView()
+                Text("Previewing…").foregroundStyle(.secondary).padding(.top, 8)
+                Spacer()
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: Page grid
