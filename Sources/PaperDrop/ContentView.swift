@@ -124,10 +124,11 @@ struct ContentView: View {
                         Text(paper.label).tag(paper.key)
                     }
                 }
-                // Snapping only applies to auto-detected sizes; a forced
-                // paper size overrides it.
-                Toggle("Snap to standard sizes", isOn: $model.paperSnap)
-                    .disabled(model.paperChoice != "auto")
+                // Snapping only refines an auto-detected size; with a forced
+                // paper size it has no effect, so hide it entirely then.
+                if model.paperChoice == "auto" {
+                    Toggle("Snap to standard sizes", isOn: $model.paperSnap)
+                }
                 // Orientation only bites alongside a forced paper size;
                 // auto-detect derives it from the page it found.
                 Picker("Orientation", selection: $model.paperLandscape) {
