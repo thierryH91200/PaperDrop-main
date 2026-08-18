@@ -13,8 +13,18 @@ struct PageItem: Identifiable {
 @MainActor
 final class AppModel: ObservableObject {
     @Published var scanners: [ScannerInfo] = []
-    @Published var selectedScannerID: String?
+    @Published var selectedScannerID: String? {
+        didSet {
+            guard selectedScannerID != oldValue else { return }
+            loadCapabilities()
+        }
+    }
     @Published var discovering = false
+
+    /// Resolutions the selected scanner actually advertises (eSCL
+    /// capabilities). Empty until a scanner is chosen; the menu then falls
+    /// back to a generic list. Populated by `loadCapabilities`.
+    @Published var scannerResolutions: [Int] = []
 
     @Published var pages: [PageItem] = []
     @Published var scanning = false
@@ -90,7 +100,12 @@ final class AppModel: ObservableObject {
     @AppStorage("archivePath") var archivePath =
         NSHomeDirectory() + "/Documents/Scans"
 
-    let availableDPIs = [150, 200, 300, 400, 600]
+    /// The resolutions offered in the menu: the selected scanner's real list
+    /// when known (so a WF-3820 shows 100/200/300/600/1200, not phantom
+    /// 150/400 values), otherwise a generic fallback.
+    var availableDPIs: [Int] {
+        scannerResolutions.isEmpty ? [150, 200, 300, 400, 600] : scannerResolutions
+    }
 
     private let iccBackend = ICCBackend()
     private let saneBackend = SANECLIBackend()
@@ -169,6 +184,27 @@ final class AppModel: ObservableObject {
     }
 
     // MARK: Discovery
+
+    /// Fetch the selected scanner's advertised resolutions and snap the
+    /// current dpi onto a supported value (nearest at or above, matching how
+    /// a scan request is resolved), so the menu never offers a resolution the
+    /// device silently substitutes.
+    func loadCapabilities() {
+        guard let scanner = selectedScanner else {
+            scannerResolutions = []
+            return
+        }
+        Task {
+            guard let caps = try? await backend(for: scanner).capabilities(of: scanner),
+                !caps.resolutions.isEmpty
+            else { return }
+            let res = caps.resolutions.sorted()
+            self.scannerResolutions = res
+            if !res.contains(self.dpi) {
+                self.dpi = res.first(where: { $0 >= self.dpi }) ?? res.last ?? self.dpi
+            }
+        }
+    }
 
     func discoverScanners() {
         guard !discovering else { return }
