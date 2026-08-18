@@ -354,9 +354,7 @@ struct ContentView: View {
 
     private var readyToScanState: some View {
         VStack(spacing: 18) {
-            Image(systemName: "doc.viewfinder")
-                .font(.system(size: 64, weight: .thin))
-                .foregroundStyle(.tertiary)
+            AnimatedScanIcon(active: model.scanning || model.previewing)
             Text("Place a document on the scanner")
                 .font(.title3)
                 .foregroundStyle(.secondary)
@@ -579,6 +577,32 @@ struct PageReorderDelegate: DropDelegate {
     func performDrop(info _: DropInfo) -> Bool {
         draggingID = nil
         return true
+    }
+}
+
+// MARK: - Animated scan icon
+
+/// The `doc.viewfinder` hero icon with a gentle looping "breathing" pulse so
+/// the ready-to-scan screen feels alive; it quickens and tints while a scan or
+/// preview is in flight. Manual animation (no `.symbolEffect`) to stay on the
+/// macOS 13 deployment target.
+private struct AnimatedScanIcon: View {
+    var active: Bool
+    @State private var pulse = false
+
+    var body: some View {
+        Image(systemName: "doc.viewfinder")
+            .font(.system(size: 64, weight: .thin))
+            .foregroundStyle(active ? AnyShapeStyle(.tint) : AnyShapeStyle(.tertiary))
+            .scaleEffect(pulse ? (active ? 1.09 : 1.05) : 1)
+            .opacity(pulse ? 1 : 0.6)
+            .animation(
+                .easeInOut(duration: active ? 0.7 : 1.7).repeatForever(autoreverses: true),
+                value: pulse
+            )
+            .animation(.easeInOut(duration: 0.3), value: active)
+            .onAppear { pulse = true }
+            .accessibilityHidden(true)
     }
 }
 
