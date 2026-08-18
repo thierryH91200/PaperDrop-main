@@ -158,7 +158,9 @@ final class AppModel: ObservableObject {
         }
         let lut = Pipeline.toneLUT(brightness: brightness, contrast: contrast, gamma: gamma)
         let shown = lut.map { raw.toneMapped($0) } ?? raw
-        previewImage = shown.cgImage.map { NSImage(cgImage: $0, size: .zero) }
+        previewImage = shown.cgImage.map {
+            NSImage(cgImage: $0, size: NSSize(width: $0.width, height: $0.height))
+        }
     }
 
     func clearPreview() {
@@ -254,7 +256,7 @@ final class AppModel: ObservableObject {
                 ) { url in
                     try await self.appendScanned(
                         url: url, dpi: config.dpi, mode: mode, snap: snap,
-                        fixed: fixed, tone: tone
+                        fixed: fixed, tone: tone, source: config.source
                     )
                 }
                 // Duplex: once the fronts are captured, move straight to the
@@ -279,12 +281,13 @@ final class AppModel: ObservableObject {
     /// heavy image work off the main actor, then hops back to update the UI.
     private func appendScanned(
         url: URL, dpi: Int, mode: OutputMode, snap: Bool,
-        fixed: (w: Double, h: Double)?, tone: [UInt8]?
+        fixed: (w: Double, h: Double)?, tone: [UInt8]?, source: ScanSource
     ) async throws {
         // Let a failure propagate and stop the scan: silently dropping a page
         // would desync the recto/verso counts and corrupt a duplex merge.
         let item = try await Self.process(
-            url: url, dpi: dpi, mode: mode, snap: snap, fixed: fixed, tone: tone
+            url: url, dpi: dpi, mode: mode, snap: snap, fixed: fixed, tone: tone,
+            source: source
         )
         pages.append(item)
         statusText = String(
@@ -293,13 +296,24 @@ final class AppModel: ObservableObject {
     }
 
     nonisolated static func process(
-        url: URL, dpi: Int, mode: OutputMode,
+        url: URL, dpi requestedDpi: Int, mode: OutputMode,
         snap: Bool,
         fixed: (w: Double, h: Double)? = nil,
-        tone: [UInt8]? = nil
+        tone: [UInt8]? = nil,
+        source: ScanSource = .auto
     )
         async throws -> PageItem
     {
+        // Use the resolution the pixels are actually at. The scanner may honour
+        // a request at a different resolution (a WF-3820 asked for 400 dpi
+        // returns 600); trusting the requested value made every mm↔px crop
+        // wrong, sizing the A4 window for 400 dpi and chopping the right/bottom
+        // third of a 600-dpi scan.
+        let dpi = ImageDecode.dpi(of: url) ?? requestedDpi
+        // The feeder scans at the sheet's own width, so its left/right content
+        // reaches the image edge — only the flatbed's border is bed shadow to
+        // strip. Chopping the sides on a fed page was cutting off the right.
+        let stripSides = source == .flatbed
         // Clean up the temp scan file on every exit, even if a load throws.
         defer { try? FileManager.default.removeItem(at: url) }
 
@@ -316,7 +330,8 @@ final class AppModel: ObservableObject {
         switch mode {
         case .document:
             let page = Pipeline.processDocument(
-                gray, dpi: dpi, snapSlackMM: slack, fixedMM: fixed
+                gray, dpi: dpi, snapSlackMM: slack, fixedMM: fixed,
+                stripSideBorders: stripSides
             )
             let tiff = try G4.tiff(from: page)
             let stream = try G4.extractStream(fromTIFF: tiff)
@@ -338,7 +353,10 @@ final class AppModel: ObservableObject {
         case .grayscale, .color:
             // Crop is detected on the gray copy; the chosen colour space is
             // then cropped and encoded to match.
-            let crop = Pipeline.analyze(gray, dpi: dpi, snapSlackMM: slack, fixedMM: fixed).crop
+            let crop = Pipeline.analyze(
+                gray, dpi: dpi, snapSlackMM: slack, fixedMM: fixed,
+                stripSideBorders: stripSides
+            ).crop
             let cg: CGImage?
             if mode == .color {
                 cg = color?.cropped(crop).cgImage
@@ -377,7 +395,12 @@ final class AppModel: ObservableObject {
     }
 
     /// Downscaled preview — full-resolution scans must not live in the view.
-    nonisolated static func thumbnail(_ img: CGImage, maxSide: Int = 400) -> NSImage {
+    /// The NSImage carries its pixel size so SwiftUI knows the aspect ratio
+    /// (a zero size makes scaledToFit unable to fit the page, clipping it).
+    nonisolated static func thumbnail(_ img: CGImage, maxSide: Int = 1000) -> NSImage {
+        func sized(_ cg: CGImage) -> NSImage {
+            NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
+        }
         let scale = Double(maxSide) / Double(max(img.width, img.height))
         // RGB context so colour scans keep their colour in the preview
         // (gray/1-bit sources still render fine here).
@@ -390,13 +413,11 @@ final class AppModel: ObservableObject {
                 space: CGColorSpaceCreateDeviceRGB(),
                 bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
             )
-        else { return NSImage(cgImage: img, size: .zero) }
+        else { return sized(img) }
         ctx.interpolationQuality = .high
         ctx.draw(img, in: CGRect(x: 0, y: 0, width: ctx.width, height: ctx.height))
-        guard let small = ctx.makeImage() else {
-            return NSImage(cgImage: img, size: .zero)
-        }
-        return NSImage(cgImage: small, size: .zero)
+        guard let small = ctx.makeImage() else { return sized(img) }
+        return sized(small)
     }
 
     nonisolated static func mmLabel(_ w: Int, _ h: Int, _ dpi: Int) -> String {

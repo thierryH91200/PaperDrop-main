@@ -161,6 +161,26 @@ public enum ImageDecode {
         guard let src = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
         return CGImageSourceCreateImageAtIndex(src, 0, nil)
     }
+
+    /// The scan's own resolution, read from the file's DPI metadata. The
+    /// device may honour a request at a *different* resolution (a WF-3820
+    /// asked for 400 dpi returns 600), and every mm↔px crop must use the
+    /// resolution the pixels are actually at, not the one requested.
+    public static func dpi(of url: URL) -> Int? {
+        guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
+            let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [CFString: Any]
+        else { return nil }
+        // Prefer the explicit DPI; fall back to the JFIF/TIFF resolution tags.
+        if let d = props[kCGImagePropertyDPIWidth] as? Double, d > 0 {
+            return Int(d.rounded())
+        }
+        if let tiff = props[kCGImagePropertyTIFFDictionary] as? [CFString: Any],
+            let d = tiff[kCGImagePropertyTIFFXResolution] as? Double, d > 0
+        {
+            return Int(d.rounded())
+        }
+        return nil
+    }
 }
 
 /// Shared ImageIO encoding (used for JPEG pages and G4 TIFFs).

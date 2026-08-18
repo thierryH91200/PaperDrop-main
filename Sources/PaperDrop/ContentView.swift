@@ -442,41 +442,48 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // MARK: Page grid
+    // MARK: Pages — a vertical list of large pages, scrolling top to bottom
 
-    private let columns = [
-        GridItem(
-            .adaptive(minimum: 150, maximum: 190),
-            spacing: 16
-        )
-    ]
+    /// Width of the page column; pages read at a comfortable size like the
+    /// preview rather than as small thumbnails.
+    private static let pageColumnWidth: CGFloat = 680
 
     @State private var draggingID: UUID?
 
     private var pageGrid: some View {
-        ScrollView {
-            LazyVGrid(columns: columns, spacing: 16) {
-                ForEach(Array(model.pages.enumerated()), id: \.element.id) { idx, page in
-                    PageCell(page: page, number: idx + 1, kindLabel: model.duplexTag(for: idx)) {
-                        model.deletePage(page.id)
-                    }
-                    .opacity(draggingID == page.id ? 0.4 : 1)
-                    .onDrag {
-                        draggingID = page.id
-                        return NSItemProvider(object: page.id.uuidString as NSString)
-                    }
-                    .onDrop(
-                        of: [.text],
-                        delegate: PageReorderDelegate(
-                            targetID: page.id,
-                            draggingID: $draggingID,
-                            model: model
+        GeometryReader { geo in
+            // Explicit page width from the available space — a maxWidth frame
+            // alone did not constrain the resizable image, which overflowed.
+            let pageWidth = min(geo.size.width - 40, Self.pageColumnWidth)
+            ScrollView {
+                LazyVStack(spacing: 20) {
+                    ForEach(Array(model.pages.enumerated()), id: \.element.id) { idx, page in
+                        PageCell(
+                            page: page, number: idx + 1,
+                            kindLabel: model.duplexTag(for: idx), width: pageWidth
+                        ) {
+                            model.deletePage(page.id)
+                        }
+                        .opacity(draggingID == page.id ? 0.4 : 1)
+                        .onDrag {
+                            draggingID = page.id
+                            return NSItemProvider(object: page.id.uuidString as NSString)
+                        }
+                        .onDrop(
+                            of: [.text],
+                            delegate: PageReorderDelegate(
+                                targetID: page.id,
+                                draggingID: $draggingID,
+                                model: model
+                            )
                         )
-                    )
+                    }
+                    scanNextCell
+                        .frame(width: pageWidth)
                 }
-                scanNextCell
+                .frame(maxWidth: .infinity)
+                .padding(20)
             }
-            .padding(16)
         }
     }
 
@@ -489,11 +496,11 @@ struct ContentView: View {
                     cancelScanButton("Cancel", large: false)
                 } else {
                     Image(systemName: "plus.viewfinder")
-                        .font(.system(size: 34, weight: .thin))
+                        .font(.system(size: 30, weight: .thin))
                     Text("Scan Next Page").font(.callout)
                 }
             }
-            .frame(maxWidth: .infinity, minHeight: 200)
+            .frame(maxWidth: .infinity, minHeight: 120)
             .background(
                 RoundedRectangle(cornerRadius: 10)
                     .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [6]))
@@ -582,6 +589,8 @@ struct PageCell: View {
     let number: Int
     /// Recto/Verso caption during a duplex capture; nil = the usual "Page N".
     var kindLabel: String? = nil
+    /// Explicit render width, so the resizable page image cannot overflow.
+    let width: CGFloat
     let onDelete: () -> Void
     @State private var hovering = false
 
@@ -590,23 +599,26 @@ struct PageCell: View {
             ZStack(alignment: .topTrailing) {
                 Group {
                     if let thumb = page.thumbnail {
+                        // Fixed width, natural page height — the whole page
+                        // shows, never clipped.
                         Image(nsImage: thumb)
                             .resizable()
-                            .aspectRatio(contentMode: .fit)
+                            .scaledToFit()
                     } else {
                         Image(systemName: "doc")
                             .font(.largeTitle)
                             .foregroundStyle(.tertiary)
+                            .frame(minHeight: 220)
                     }
                 }
-                .frame(maxWidth: .infinity, minHeight: 160, maxHeight: 200)
+                .frame(width: width)
                 .background(.white)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
                         .strokeBorder(.separator, lineWidth: 1)
                 )
-                .shadow(color: .black.opacity(0.15), radius: 3, y: 1)
+                .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
 
                 if hovering {
                     Button(action: onDelete) {

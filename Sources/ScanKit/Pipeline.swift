@@ -83,7 +83,15 @@ public enum Pipeline {
 
     /// Whiten ink components touching the border (scanner-bed edges/shadows)
     /// and components smaller than minSpeck pixels (dust).
-    public static func cleanComponents(_ bw: inout BinaryImage, minSpeck: Int = 4) {
+    ///
+    /// `stripSides` also whitens components touching the left/right edges. That
+    /// is right for the flatbed, where a document sits inside a larger bed and
+    /// anything touching an edge is bed shadow. It is wrong for the feeder,
+    /// which scans at the sheet's own width: there the page's own left/right
+    /// content reaches the image edge, so stripping it would chop the page.
+    public static func cleanComponents(
+        _ bw: inout BinaryImage, minSpeck: Int = 4, stripSides: Bool = true
+    ) {
         let w = bw.width, h = bw.height
         var labels = [Int32](repeating: 0, count: w * h)
         var sizes: [Int32] = [0]
@@ -102,7 +110,9 @@ public enum Pipeline {
             while let idx = stack.popLast() {
                 sizes[Int(label)] += 1
                 let x = idx % w, y = idx / w
-                if x == 0 || y == 0 || x == w - 1 || y == h - 1 {
+                let atTopBottom = y == 0 || y == h - 1
+                let atLeftRight = x == 0 || x == w - 1
+                if atTopBottom || (stripSides && atLeftRight) {
                     touchesBorder[Int(label)] = true
                 }
                 // 8-connectivity
@@ -389,12 +399,13 @@ public enum Pipeline {
     public static func analyze(
         _ gray: GrayImage, dpi: Int,
         snapSlackMM: Double = 25,
-        fixedMM: (w: Double, h: Double)? = nil
+        fixedMM: (w: Double, h: Double)? = nil,
+        stripSideBorders: Bool = true
     )
         -> (bw: BinaryImage, crop: Crop)
     {
         var bw = threshold(gray, at: otsuThreshold(gray))
-        cleanComponents(&bw)
+        cleanComponents(&bw, stripSides: stripSideBorders)
         let crop =
             contentCrop(
                 bw, dpi: dpi, snapSlackMM: snapSlackMM,
@@ -408,13 +419,14 @@ public enum Pipeline {
         _ gray: GrayImage, dpi: Int,
         crop: Bool = true,
         snapSlackMM: Double = 25,
-        fixedMM: (w: Double, h: Double)? = nil
+        fixedMM: (w: Double, h: Double)? = nil,
+        stripSideBorders: Bool = true
     )
         -> ProcessedPage
     {
         let (bw, detected) = analyze(
             gray, dpi: dpi, snapSlackMM: snapSlackMM,
-            fixedMM: fixedMM
+            fixedMM: fixedMM, stripSideBorders: stripSideBorders
         )
         let c =
             crop

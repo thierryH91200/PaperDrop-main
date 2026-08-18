@@ -105,6 +105,7 @@ public final class ESCLBackend: NSObject, ScannerBackend, URLSessionDelegate, @u
         onPage: @escaping @Sendable (URL) async throws -> Void
     ) async throws -> [URL] {
         guard let base = Self.baseURL(from: scanner.id) else { throw ScanError.noDevice }
+        await ensureReady(base)
         let caps = try await fetchCaps(base)
         // Nearest supported resolution at or above the request.
         let dpi =
@@ -153,25 +154,31 @@ public final class ESCLBackend: NSObject, ScannerBackend, URLSessionDelegate, @u
         var waited = 0.0
         var finished = false
         let cap = min(maxPages, 500)
-        loop: while pages.count < cap {
-            switch try await nextDocument(job) {
-            case let .page(data):
-                let out = directory.appendingPathComponent("escl-\(stamp)-\(pages.count).jpg")
-                try data.write(to: out)
-                pages.append(out)
-                try await onPage(out)  // surface this page to the UI immediately
-                waited = 0
-            case let .retry(after):
-                // Next feeder sheet not ready yet; wait and re-ask. Bound the
-                // total wait so a wedged feeder can't hang forever.
-                guard waited < 90 else { break loop }
-                let wait = min(max(after, 0.5), 5)
-                waited += wait
-                try await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000))
-            case .done:
-                finished = true
-                break loop
+        do {
+            loop: while pages.count < cap {
+                switch try await nextDocument(job) {
+                case let .page(data):
+                    let out = directory.appendingPathComponent("escl-\(stamp)-\(pages.count).jpg")
+                    try data.write(to: out)
+                    pages.append(out)
+                    try await onPage(out)  // surface this page to the UI immediately
+                    waited = 0
+                case let .retry(after):
+                    // Next feeder sheet not ready yet; wait and re-ask. Bound
+                    // the total wait so a wedged feeder can't hang forever.
+                    guard waited < 90 else { break loop }
+                    let wait = min(max(after, 0.5), 5)
+                    waited += wait
+                    try await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000))
+                case .done:
+                    finished = true
+                    break loop
+                }
             }
+        } catch {
+            // Cancel so a failed scan doesn't leave the scanner "Processing".
+            await cancelJob(job)
+            throw error
         }
         // Stopped before the job drained (a preview's one-page limit, or the
         // safety cap): cancel it so the scanner doesn't hold the rest.
@@ -195,6 +202,25 @@ public final class ESCLBackend: NSObject, ScannerBackend, URLSessionDelegate, @u
         var req = URLRequest(url: job)
         req.httpMethod = "DELETE"
         _ = try? await session.data(for: req)
+    }
+
+    /// Preflight before a scan: cancel any job we left dangling, wake the
+    /// device, and wait for it to leave a stuck "Processing" state. Bounded so
+    /// a genuinely wedged scanner still falls through to the normal 503 retry.
+    private func ensureReady(_ base: URL) async {
+        if let stale = withJobLock({ currentJob }) {
+            await cancelJob(stale)
+            setCurrentJob(nil)
+        }
+        let url = base.appendingPathComponent("ScannerStatus")
+        for _ in 0..<10 {
+            guard let (data, resp) = try? await session.data(from: url),
+                (resp as? HTTPURLResponse)?.statusCode == 200,
+                let xml = String(data: data, encoding: .utf8)
+            else { return }  // can't read the status — just try the scan
+            if xml.range(of: "pwg:State>Idle") != nil { return }
+            try? await Task.sleep(nanoseconds: 800_000_000)
+        }
     }
 
     // MARK: - eSCL requests
