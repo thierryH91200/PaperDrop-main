@@ -1,3 +1,4 @@
+import AppKit
 import ScanKit
 import SwiftUI
 
@@ -355,6 +356,8 @@ struct ContentView: View {
     private var readyToScanState: some View {
         VStack(spacing: 18) {
             AnimatedScanIcon(active: model.scanning || model.previewing)
+                .frame(width: 96, height: 96)
+                .accessibilityHidden(true)
             Text("Place a document on the scanner")
                 .font(.title3)
                 .foregroundStyle(.secondary)
@@ -397,6 +400,14 @@ struct ContentView: View {
                     .foregroundStyle(.orange)
             }
         }
+        .padding(44)
+        .background(
+            AnimatedDashedBorder(
+                isActive: model.scanning || model.previewing,
+                cornerRadius: 18, lineWidth: 2, dash: [8, 5]
+            )
+        )
+        .padding(24)
     }
 
     // MARK: Adjustable preview
@@ -584,25 +595,90 @@ struct PageReorderDelegate: DropDelegate {
 
 /// The `doc.viewfinder` hero icon with a gentle looping "breathing" pulse so
 /// the ready-to-scan screen feels alive; it quickens and tints while a scan or
-/// preview is in flight. Manual animation (no `.symbolEffect`) to stay on the
-/// macOS 13 deployment target.
-private struct AnimatedScanIcon: View {
+/// preview is in flight. The pulse runs on a `CALayer` via Core Animation, so
+/// it animates on the render server (off the main thread) and never competes
+/// with SwiftUI layout.
+private struct AnimatedScanIcon: NSViewRepresentable {
     var active: Bool
-    @State private var pulse = false
 
-    var body: some View {
-        Image(systemName: "doc.viewfinder")
-            .font(.system(size: 64, weight: .thin))
-            .foregroundStyle(active ? AnyShapeStyle(.tint) : AnyShapeStyle(.tertiary))
-            .scaleEffect(pulse ? (active ? 1.09 : 1.05) : 1)
-            .opacity(pulse ? 1 : 0.6)
-            .animation(
-                .easeInOut(duration: active ? 0.7 : 1.7).repeatForever(autoreverses: true),
-                value: pulse
-            )
-            .animation(.easeInOut(duration: 0.3), value: active)
-            .onAppear { pulse = true }
-            .accessibilityHidden(true)
+    func makeNSView(context: Context) -> ScanIconLayerView { ScanIconLayerView() }
+
+    func updateNSView(_ view: ScanIconLayerView, context: Context) {
+        view.setActive(active)
+    }
+}
+
+/// Layer-backed host for the pulsing scan symbol. Renders the SF Symbol once
+/// per state into the layer's `contents` and drives scale+opacity with a
+/// repeating `CAAnimationGroup`.
+final class ScanIconLayerView: NSView {
+    private let icon = CALayer()
+    private var active = false
+    private var started = false
+    private static let side: CGFloat = 72
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        layer?.addSublayer(icon)
+        icon.contentsGravity = .resizeAspect
+        renderSymbol()
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) unavailable") }
+
+    override var intrinsicContentSize: NSSize { NSSize(width: 96, height: 96) }
+
+    override func layout() {
+        super.layout()
+        icon.bounds = CGRect(x: 0, y: 0, width: Self.side, height: Self.side)
+        icon.position = CGPoint(x: bounds.midX, y: bounds.midY)
+        if !started {
+            started = true
+            addPulse()
+        }
+    }
+
+    override func viewDidChangeBackingProperties() {
+        super.viewDidChangeBackingProperties()
+        icon.contentsScale = window?.backingScaleFactor ?? 2
+    }
+
+    func setActive(_ newValue: Bool) {
+        guard newValue != active else { return }
+        active = newValue
+        renderSymbol()
+        addPulse()  // re-arm with the new tempo/amplitude
+    }
+
+    private func renderSymbol() {
+        let color: NSColor = active ? .controlAccentColor : .tertiaryLabelColor
+        let config = NSImage.SymbolConfiguration(pointSize: 64, weight: .thin)
+            .applying(NSImage.SymbolConfiguration(hierarchicalColor: color))
+        guard
+            let image = NSImage(systemSymbolName: "doc.viewfinder", accessibilityDescription: nil)?
+                .withSymbolConfiguration(config)
+        else { return }
+        var rect = CGRect(origin: .zero, size: image.size)
+        icon.contents = image.cgImage(forProposedRect: &rect, context: nil, hints: nil)
+        icon.contentsScale = window?.backingScaleFactor ?? 2
+    }
+
+    private func addPulse() {
+        let scale = CABasicAnimation(keyPath: "transform.scale")
+        scale.fromValue = 1.0
+        scale.toValue = active ? 1.09 : 1.05
+        let opacity = CABasicAnimation(keyPath: "opacity")
+        opacity.fromValue = 0.6
+        opacity.toValue = 1.0
+        let group = CAAnimationGroup()
+        group.animations = [scale, opacity]
+        group.duration = active ? 0.7 : 1.7
+        group.autoreverses = true
+        group.repeatCount = .infinity
+        group.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        icon.add(group, forKey: "pulse")
     }
 }
 
