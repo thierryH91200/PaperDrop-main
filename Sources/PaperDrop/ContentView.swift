@@ -41,6 +41,7 @@ struct ContentView: View {
     @EnvironmentObject var model: AppModel
     /// 0 = General settings, 1 = Advanced (image adjustments).
     @State private var settingsTab = 0
+    @State private var showNameSettings = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -70,6 +71,9 @@ struct ContentView: View {
         }
         .frame(minWidth: 780, minHeight: 480)
         .onAppear { model.discoverScanners() }
+        .sheet(isPresented: $showNameSettings) {
+            FileNameSettingsView(model: model)
+        }
     }
 
     // MARK: Sidebar — scan settings panel
@@ -114,6 +118,14 @@ struct ContentView: View {
                 }
             }
             .formStyle(.grouped)
+            .frame(maxHeight: .infinity)
+
+            // Output settings (file name, folder, OCR, uniform pages) apply to
+            // both tabs; pin them at the very bottom, just above the actions,
+            // rather than scrolling with the per-tab settings.
+            Form { outputSection }
+                .formStyle(.grouped)
+                .fixedSize(horizontal: false, vertical: true)
 
             Divider()
             HStack(spacing: 10) {
@@ -185,11 +197,25 @@ struct ContentView: View {
             Text("Landscape").tag(true)
         }
         .disabled(model.fixedPaperMM == nil)
+    }
 
+    // MARK: Output settings — shown under both tabs (they apply to the saved
+    // PDF regardless of General/Advanced), so they live outside the tab switch.
+
+    @ViewBuilder
+    private var outputSection: some View {
         Section {
             LabeledContent("Format") { Text("PDF") }
-            TextField("Document name", text: $model.docName)
-                .onSubmit { model.savePDF() }
+            LabeledContent("File name") {
+                HStack(spacing: 6) {
+                    Text(verbatim: model.effectiveFileName)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                        .foregroundStyle(.secondary)
+                        .help("The PDF will be saved under this name")
+                    Button("Edit…") { showNameSettings = true }
+                }
+            }
             LabeledContent("Folder") {
                 HStack(spacing: 6) {
                     Text(URL(fileURLWithPath: model.archivePath).lastPathComponent)

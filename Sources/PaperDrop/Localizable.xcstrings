@@ -51,6 +51,28 @@
         }
       }
     },
+    "Add date" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter la date"
+          }
+        }
+      }
+    },
+    "Add time" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter l’heure"
+          }
+        }
+      }
+    },
     "Advanced" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -293,6 +315,17 @@
         }
       }
     },
+    "Digits" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nombre de chiffres"
+          }
+        }
+      }
+    },
     "Discard" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -326,6 +359,17 @@
         }
       }
     },
+    "Edit…" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modifier…"
+          }
+        }
+      }
+    },
     "Feeder" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -333,6 +377,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Chargeur"
+          }
+        }
+      }
+    },
+    "File name" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nom de fichier"
+          }
+        }
+      }
+    },
+    "Filename preview" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aperçu du nom de fichier"
           }
         }
       }
@@ -491,6 +557,17 @@
         }
       }
     },
+    "no HTTP response from scanner" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "aucune réponse HTTP du scanner"
+          }
+        }
+      }
+    },
     "No scanner found" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -535,6 +612,17 @@
         }
       }
     },
+    "OK" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OK"
+          }
+        }
+      }
+    },
     "Orientation" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -546,8 +634,16 @@
         }
       }
     },
-    "PDF" : {
-      "extractionState" : "manual"
+    "Overwrite files with the same name" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Écraser les fichiers de même nom"
+          }
+        }
+      }
     },
     "Page %@ · %@ · %@" : {
       "extractionState" : "manual",
@@ -604,6 +700,9 @@
         }
       }
     },
+    "PDF" : {
+      "extractionState" : "manual"
+    },
     "Place a document on the scanner" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -622,6 +721,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Portrait"
+          }
+        }
+      }
+    },
+    "Prefix" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Préfixe"
           }
         }
       }
@@ -725,7 +835,7 @@
         }
       }
     },
-    "Save PDF…" : {
+    "Save PDF1…" : {
       "extractionState" : "manual",
       "localizations" : {
         "fr" : {
@@ -743,6 +853,39 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Enregistré %1$@ (%2$lld Ko)"
+          }
+        }
+      }
+    },
+    "Scan cancelled" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Numérisation annulée"
+          }
+        }
+      }
+    },
+    "scan did not run" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "la numérisation n'a pas démarré"
+          }
+        }
+      }
+    },
+    "Scan failed: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Échec de la numérisation : %@"
           }
         }
       }
@@ -791,28 +934,6 @@
         }
       }
     },
-    "Scan cancelled" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Numérisation annulée"
-          }
-        }
-      }
-    },
-    "Scan failed: %@" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Échec de la numérisation : %@"
-          }
-        }
-      }
-    },
     "Scan the fronts" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -820,6 +941,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Numérisez les rectos"
+          }
+        }
+      }
+    },
+    "scanimage produced no file" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "scanimage n'a produit aucun fichier"
           }
         }
       }
@@ -835,6 +967,28 @@
         }
       }
     },
+    "scanner busy" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "scanner occupé"
+          }
+        }
+      }
+    },
+    "scanner did not return capabilities" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "le scanner n'a pas renvoyé ses capacités"
+          }
+        }
+      }
+    },
     "Scanner disconnected" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -842,6 +996,50 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Scanner déconnecté"
+          }
+        }
+      }
+    },
+    "scanner produced no page" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "le scanner n'a produit aucune page"
+          }
+        }
+      }
+    },
+    "scanner rejected the scan settings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "le scanner a refusé les réglages de numérisation"
+          }
+        }
+      }
+    },
+    "scanner returned HTTP %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "le scanner a renvoyé HTTP %lld"
+          }
+        }
+      }
+    },
+    "scanner returned no job location" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "le scanner n'a pas renvoyé l'emplacement du travail"
           }
         }
       }
@@ -912,6 +1110,28 @@
         }
       }
     },
+    "Start at" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Numéro de début"
+          }
+        }
+      }
+    },
+    "The PDF will be saved under this name" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le PDF sera enregistré sous ce nom"
+          }
+        }
+      }
+    },
     "TIFF encode failed" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -945,6 +1165,17 @@
         }
       }
     },
+    "Use a counter" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utiliser un compteur"
+          }
+        }
+      }
+    },
     "Verso %lld" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -952,105 +1183,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Verso %lld"
-          }
-        }
-      }
-    },
-    "no HTTP response from scanner" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "aucune réponse HTTP du scanner"
-          }
-        }
-      }
-    },
-    "scan did not run" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "la numérisation n'a pas démarré"
-          }
-        }
-      }
-    },
-    "scanimage produced no file" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "scanimage n'a produit aucun fichier"
-          }
-        }
-      }
-    },
-    "scanner busy" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "scanner occupé"
-          }
-        }
-      }
-    },
-    "scanner did not return capabilities" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "le scanner n'a pas renvoyé ses capacités"
-          }
-        }
-      }
-    },
-    "scanner produced no page" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "le scanner n'a produit aucune page"
-          }
-        }
-      }
-    },
-    "scanner rejected the scan settings" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "le scanner a refusé les réglages de numérisation"
-          }
-        }
-      }
-    },
-    "scanner returned HTTP %lld" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "le scanner a renvoyé HTTP %lld"
-          }
-        }
-      }
-    },
-    "scanner returned no job location" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "le scanner n'a pas renvoyé l'emplacement du travail"
           }
         }
       }

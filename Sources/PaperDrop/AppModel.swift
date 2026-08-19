@@ -10,6 +10,37 @@ struct PageItem: Identifiable {
     let build: (_ ocr: Bool) throws -> PDFWriter.Page
 }
 
+/// Builds a save file name from an optional prefix plus date, time and counter
+/// components — the same scheme as Epson Scan 2's "File Name Settings". Pure
+/// value type so the panel's live preview and the actual save share one home.
+struct FileNameFormat: Equatable {
+    var prefix: String = "Scan"
+    var addDate: Bool = true
+    var addTime: Bool = true
+    var useCounter: Bool = false
+    var digits: Int = 4
+
+    /// The base name (no extension) for a given counter value: prefix, then
+    /// yyyyMMdd, then _HHmmss, then a zero-padded counter — each part optional.
+    /// `now` is injected so a preview and the real save can agree.
+    func base(counter: Int, now: Date = Date()) -> String {
+        var name = prefix.trimmingCharacters(in: .whitespaces)
+        if addDate { name += Self.stamp("yyyyMMdd", now) }
+        if addTime { name += "_" + Self.stamp("HHmmss", now) }
+        if useCounter {
+            name += "_" + String(format: "%0\(max(1, min(8, digits)))d", counter)
+        }
+        return name.isEmpty ? "Scan" : name
+    }
+
+    private static func stamp(_ format: String, _ date: Date) -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")  // stable numeric stamps
+        f.dateFormat = format
+        return f.string(from: date)
+    }
+}
+
 @MainActor
 final class AppModel: ObservableObject {
     @Published var scanners: [ScannerInfo] = []
@@ -31,7 +62,23 @@ final class AppModel: ObservableObject {
     @Published var saving = false
     @Published var statusText = ""
     @Published var errorText: String?
-    @Published var docName = ""
+    // Save-file naming (Epson Scan 2 style): prefix + date + time + counter.
+    @AppStorage("namePrefix") var namePrefix = "Scan"
+    @AppStorage("nameAddDate") var nameAddDate = true
+    @AppStorage("nameAddTime") var nameAddTime = true
+    @AppStorage("nameUseCounter") var nameUseCounter = false
+    @AppStorage("nameCounterDigits") var nameCounterDigits = 4
+    /// Next counter value; advances after each save that uses the counter.
+    @AppStorage("nameCounterNext") var nameCounterNext = 1
+    @AppStorage("nameOverwrite") var nameOverwrite = false
+
+    /// The naming scheme assembled from the persisted fields.
+    var nameFormat: FileNameFormat {
+        FileNameFormat(
+            prefix: namePrefix, addDate: nameAddDate, addTime: nameAddTime,
+            useCounter: nameUseCounter, digits: nameCounterDigits
+        )
+    }
 
     /// Scan resolution, persisted. Edited in the settings panel.
     @AppStorage("dpi") var dpi = 300
@@ -478,6 +525,14 @@ final class AppModel: ObservableObject {
         return true
     }
 
+    /// The file name `savePDF` will write next, from the current naming
+    /// scheme and counter. Surfaced live in the panel so the saved name is
+    /// never a surprise. (A duplicate may gain a " (2)" suffix at save time
+    /// when overwrite is off.)
+    var effectiveFileName: String {
+        nameFormat.base(counter: nameCounterNext) + ".pdf"
+    }
+
     func savePDF() {
         // Finish a duplex capture by interleaving the two passes first.
         if duplexReadyToMerge { duplexMerge() }
@@ -489,11 +544,10 @@ final class AppModel: ObservableObject {
             ocr
             ? String(localized: "Assembling PDF (OCR)…")
             : String(localized: "Assembling PDF…")
-        let name = docName.trimmingCharacters(in: .whitespaces)
-        let fileName =
-            (name.isEmpty
-                ? "Scan " + Date().formatted(date: .abbreviated, time: .shortened)
-                : name) + ".pdf"
+        // Resolve the name now so the timestamp matches the moment of saving.
+        let baseName = nameFormat.base(counter: nameCounterNext)
+        let usedCounter = nameUseCounter
+        let overwrite = nameOverwrite
         let dir = URL(fileURLWithPath: archivePath)
         let builders = pages.map(\.build)
 
@@ -516,11 +570,25 @@ final class AppModel: ObservableObject {
                 try FileManager.default.createDirectory(
                     at: dir, withIntermediateDirectories: true
                 )
-                let dest = dir.appendingPathComponent(fileName)
+                // Unless overwrite is on, disambiguate a name clash with " (n)".
+                // Resolve into a `let` so the URL can cross into the MainActor
+                // closure under Swift 6 strict concurrency.
+                let dest: URL = {
+                    var url = dir.appendingPathComponent(baseName + ".pdf")
+                    if !overwrite {
+                        var n = 2
+                        while FileManager.default.fileExists(atPath: url.path) {
+                            url = dir.appendingPathComponent("\(baseName) (\(n)).pdf")
+                            n += 1
+                        }
+                    }
+                    return url
+                }()
                 try data.write(to: dest)
+                let fileName = dest.lastPathComponent
                 await MainActor.run {
                     self.pages = []
-                    self.docName = ""
+                    if usedCounter { self.nameCounterNext += 1 }
                     self.saving = false
                     self.resetDuplexStaging()
                     self.statusText = String(
@@ -556,7 +624,6 @@ final class AppModel: ObservableObject {
 
     func discardAll() {
         pages = []
-        docName = ""
         statusText = ""
         errorText = nil
         resetDuplexStaging()
