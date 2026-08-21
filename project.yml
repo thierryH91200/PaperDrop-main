@@ -96,6 +96,13 @@ targets:
     platform: macOS
     sources:
       - Sources/scantool
+    settings:
+      base:
+        # Keep the CLI out of the app's archive: an installed command-line
+        # tool alongside the .app makes Xcode classify the archive as a
+        # "Generic Xcode Archive" (no ApplicationProperties → only the
+        # "Custom" distribution method, no Developer ID export).
+        SKIP_INSTALL: "YES"
     dependencies:
       - target: ScanKit
       - sdk: IOKit.framework
