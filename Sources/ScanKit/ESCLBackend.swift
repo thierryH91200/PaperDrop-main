@@ -32,22 +32,56 @@ public final class ESCLBackend: NSObject, ScannerBackend, URLSessionDelegate, @u
     /// AirPrint printer half (`_ipp(s)._tcp`). So we gather hosts from both
     /// the scan and the printer service types, then *confirm* eSCL by fetching
     /// ScannerCapabilities from each candidate; a 200 means it really scans.
+    ///
+    /// A just-powered-on scanner is the awkward case: Bonjour surfaces it (and
+    /// ImageCaptureCore lists it too) seconds before its HTTP/eSCL server has
+    /// finished booting, so a single probe fails and the device falls through
+    /// to the ICC twin — which can't open it (-9902). To avoid needing the
+    /// vendor app to "wake" it, we confirm patiently: a host we've confirmed as
+    /// eSCL before, or one advertising a real scan service, gets a bounded
+    /// wake-and-retry window (the repeated probes also nudge it awake); unknown
+    /// printer-only hosts get a quick look so a plain AirPrint printer doesn't
+    /// slow every discovery.
     public func discover(timeout: TimeInterval) async -> [ScannerInfo] {
         let candidates = await ESCLDiscovery().run(timeout: min(timeout, 5))
+
+        // Merge Bonjour candidates with the base URLs of scanners confirmed in
+        // earlier runs, keyed by host. A remembered host is always "patient",
+        // and its exact known base URL is tried first.
+        struct Target {
+            var bases: [URL]
+            var name: String
+            var patient: Bool
+        }
+        var targets: [String: Target] = [:]
+        for cand in candidates {
+            targets[cand.host.lowercased()] = Target(
+                bases: cand.baseURLCandidates(), name: cand.name,
+                patient: cand.uscanPort != nil
+            )
+        }
+        for base in Self.knownBases() {
+            guard let host = base.host?.lowercased() else { continue }
+            if var t = targets[host] {
+                t.bases = ([base] + t.bases.filter { $0 != base })
+                t.patient = true
+                targets[host] = t
+            } else {
+                targets[host] = Target(bases: [base], name: base.host ?? "Scanner", patient: true)
+            }
+        }
+
         var byHost: [String: ScannerInfo] = [:]
         await withTaskGroup(of: (String, ScannerInfo)?.self) { group in
-            for cand in candidates {
+            for (host, t) in targets {
                 group.addTask { [self] in
-                    for base in cand.baseURLCandidates() where await probeESCL(base) {
-                        return (
-                            cand.host.lowercased(),
-                            ScannerInfo(
-                                id: "escl:\(base.absoluteString)",
-                                name: "\(cand.name) (eSCL)"
-                            )
-                        )
+                    guard let base = await confirmESCL(t.bases, patient: t.patient) else {
+                        return nil
                     }
-                    return nil
+                    return (
+                        host,
+                        ScannerInfo(id: "escl:\(base.absoluteString)", name: "\(t.name) (eSCL)")
+                    )
                 }
             }
             for await case let (host, info)? in group where byHost[host] == nil {
@@ -57,13 +91,50 @@ public final class ESCLBackend: NSObject, ScannerBackend, URLSessionDelegate, @u
         return Array(byHost.values)
     }
 
+    /// The first base URL that answers eSCL, retrying within a bounded window
+    /// so a still-booting scanner gets confirmed rather than dropped. Returns
+    /// as soon as any probe succeeds (the warm case costs a single round trip).
+    private func confirmESCL(_ bases: [URL], patient: Bool) async -> URL? {
+        let deadline = Date().addingTimeInterval(patient ? 12 : 2.5)
+        repeat {
+            for base in bases where await probeESCL(base) {
+                Self.rememberBase(base)
+                return base
+            }
+            guard Date() < deadline else { break }
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+        } while Date() < deadline
+        return nil
+    }
+
     /// True when <base>/ScannerCapabilities answers 200 — the authoritative
     /// test that a host speaks eSCL at this base URL.
     private func probeESCL(_ base: URL) async -> Bool {
         var req = URLRequest(url: base.appendingPathComponent("ScannerCapabilities"))
-        req.timeoutInterval = 4
+        req.timeoutInterval = 2.5
         guard let (_, resp) = try? await session.data(for: req) else { return false }
         return (resp as? HTTPURLResponse)?.statusCode == 200
+    }
+
+    // MARK: Remembered eSCL hosts
+
+    /// eSCL base URLs confirmed in earlier runs. Seeding discovery with these
+    /// lets a returning user's scanner get the patient wake-and-retry window
+    /// even on a cold boot where it only advertises its printer half.
+    private static let knownBasesKey = "esclKnownBases"
+
+    static func knownBases() -> [URL] {
+        (UserDefaults.standard.stringArray(forKey: knownBasesKey) ?? [])
+            .compactMap(URL.init(string:))
+    }
+
+    static func rememberBase(_ base: URL) {
+        var list = UserDefaults.standard.stringArray(forKey: knownBasesKey) ?? []
+        let s = base.absoluteString
+        guard !list.contains(s) else { return }
+        list.append(s)
+        if list.count > 8 { list.removeFirst(list.count - 8) }  // keep it small
+        UserDefaults.standard.set(list, forKey: knownBasesKey)
     }
 
     // MARK: Capabilities
