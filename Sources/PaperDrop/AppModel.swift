@@ -342,12 +342,6 @@ final class AppModel: ObservableObject {
                         fixed: fixed, tone: tone, source: config.source
                     )
                 }
-                // Duplex: once the fronts are captured, move straight to the
-                // backs so a single scan button drives the whole flow (no
-                // separate "Backs →" step).
-                if duplex, duplexStage == .fronts, !pages.isEmpty {
-                    duplexProceedToBacks()
-                }
             } catch {
                 if case ScanError.cancelled = error {
                     self.statusText = String(localized: "Scan cancelled")
@@ -630,6 +624,20 @@ final class AppModel: ObservableObject {
     }
 
     // MARK: Duplex staging
+
+    /// Recto button: add fronts. Repeatable, so a flatbed can take them one
+    /// sheet at a time.
+    func scanFronts() {
+        guard duplex, duplexStage == .fronts else { return }
+        scanPage()
+    }
+
+    /// Verso button: lock in the fronts on first use, then scan the backs.
+    func scanBacks() {
+        guard duplex, !pages.isEmpty, !busy else { return }
+        if duplexStage == .fronts { duplexProceedToBacks() }
+        scanPage()
+    }
 
     /// Lock in the scanned fronts and switch to scanning the (flipped) backs.
     func duplexProceedToBacks() {

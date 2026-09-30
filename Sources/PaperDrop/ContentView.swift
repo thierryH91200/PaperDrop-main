@@ -306,14 +306,57 @@ struct ContentView: View {
                         : "Flip the stack, scan, then Save PDF."
                 )
                 .foregroundStyle(.secondary)
+                .lineLimit(1)
             }
             Spacer(minLength: 0)
+            if duplex {
+                duplexButtons(fronts: fronts)
+            }
         }
         .padding(.horizontal, 16)
         .frame(height: Self.topBarHeight)
         .frame(maxWidth: .infinity)
         .background {
             if duplex { Color.accentColor.opacity(0.10) }
+        }
+    }
+
+    /// Recto / Verso scan buttons — in duplex they replace the generic scan
+    /// buttons. The one for the current pass is prominent and takes Return.
+    @ViewBuilder
+    private func duplexButtons(fronts: Bool) -> some View {
+        if model.scanning {
+            cancelScanButton("Cancel", large: false)
+                .controlSize(.small)
+        }
+        let noScanner = model.selectedScanner == nil
+        duplexButton("Recto", systemImage: "doc", current: fronts) {
+            model.scanFronts()
+        }
+        .disabled(model.busy || noScanner || !fronts)
+        .help("Scan the fronts")
+        duplexButton("Verso", systemImage: "arrow.uturn.backward.square", current: !fronts) {
+            model.scanBacks()
+        }
+        .disabled(model.busy || noScanner || model.pages.isEmpty)
+        .help("Now scan the backs")
+    }
+
+    @ViewBuilder
+    private func duplexButton(
+        _ title: LocalizedStringKey, systemImage: String, current: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        let button = Button(action: action) {
+            Label(title, systemImage: systemImage)
+        }
+        .hoverHighlight()
+        if current {
+            button
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.defaultAction)
+        } else {
+            button.buttonStyle(.bordered)
         }
     }
 
@@ -407,17 +450,21 @@ struct ContentView: View {
                     .hoverHighlight()
                     .disabled(model.busy || model.selectedScanner == nil)
 
-                    Button(action: model.scanPage) {
-                        Label("Scan First Page", systemImage: "scanner")
-                            .font(.title3)
-                            .padding(.horizontal, 18)
-                            .padding(.vertical, 8)
+                    // In duplex the Recto / Verso buttons in the top bar
+                    // drive the scan instead.
+                    if !model.duplex {
+                        Button(action: model.scanPage) {
+                            Label("Scan First Page", systemImage: "scanner")
+                                .font(.title3)
+                                .padding(.horizontal, 18)
+                                .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.large)
+                        .hoverHighlight()
+                        .disabled(model.busy || model.selectedScanner == nil)
+                        .keyboardShortcut(.defaultAction)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .hoverHighlight()
-                    .disabled(model.busy || model.selectedScanner == nil)
-                    .keyboardShortcut(.defaultAction)
                 }
             }
             if model.selectedScanner == nil {
@@ -455,13 +502,15 @@ struct ContentView: View {
                     }
                     .disabled(model.busy)
                     .hoverHighlight()
-                    Button(action: model.scanPage) {
-                        Label("Scan First Page", systemImage: "scanner")
+                    if !model.duplex {
+                        Button(action: model.scanPage) {
+                            Label("Scan First Page", systemImage: "scanner")
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(model.busy || model.selectedScanner == nil)
+                        .keyboardShortcut(.defaultAction)
+                        .hoverHighlight()
                     }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(model.busy || model.selectedScanner == nil)
-                    .keyboardShortcut(.defaultAction)
-                    .hoverHighlight()
                     Button("Close") { model.clearPreview() }
                         .disabled(model.busy)
                         .hoverHighlight()
@@ -513,8 +562,10 @@ struct ContentView: View {
                             )
                         )
                     }
-                    scanNextCell
-                        .frame(width: pageWidth)
+                    if !model.duplex || model.duplexMerged {
+                        scanNextCell
+                            .frame(width: pageWidth)
+                    }
                 }
                 .frame(maxWidth: .infinity)
                 .padding(20)

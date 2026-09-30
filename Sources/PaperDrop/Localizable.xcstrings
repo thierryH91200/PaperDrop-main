@@ -769,6 +769,17 @@
         }
       }
     },
+    "Recto" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recto"
+          }
+        }
+      }
+    },
     "Recto %lld" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1172,6 +1183,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Utiliser un compteur"
+          }
+        }
+      }
+    },
+    "Verso" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Verso"
           }
         }
       }
