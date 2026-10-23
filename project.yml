@@ -111,8 +111,8 @@ targets:
     settings:
       base:
         PRODUCT_NAME: PaperDropAppStore
-        # Replace with the bundle ID registered in App Store Connect.
-        PRODUCT_BUNDLE_IDENTIFIER: com.bensquire.paperdrop.appstore
+        # Must match the bundle ID registered in App Store Connect.
+        PRODUCT_BUNDLE_IDENTIFIER: com.thierryhentic.paperdrop
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) APP_STORE"
         ENABLE_APP_SANDBOX: "YES"
         ENABLE_HARDENED_RUNTIME: "YES"
