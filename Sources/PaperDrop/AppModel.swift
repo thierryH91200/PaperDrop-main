@@ -1,9 +1,10 @@
+import SwiftUI
+
 // The App Store target compiles ScanKit's sources directly (minus SANE and
 // USB reset), so there is no separate module to import.
 #if !APP_STORE
-import ScanKit
+    import ScanKit
 #endif
-import SwiftUI
 
 struct PageItem: Identifiable {
     let id = UUID()
@@ -152,19 +153,19 @@ final class AppModel: ObservableObject {
         AppModel.userHome + "/Documents/Scans"
 
     #if APP_STORE
-    /// Security-scoped bookmark to the archive folder. A sandboxed app may
-    /// only write where the user pointed it, and only keeps that right
-    /// across launches through this bookmark.
-    @AppStorage("archiveBookmark") var archiveBookmark: Data?
+        /// Security-scoped bookmark to the archive folder. A sandboxed app may
+        /// only write where the user pointed it, and only keeps that right
+        /// across launches through this bookmark.
+        @AppStorage("archiveBookmark") var archiveBookmark: Data?
     #endif
 
     /// The real home folder. Inside the sandbox NSHomeDirectory() is the
     /// app's container, which users never look in.
     private static var userHome: String {
         #if APP_STORE
-        if let dir = getpwuid(getuid())?.pointee.pw_dir {
-            return String(cString: dir)
-        }
+            if let dir = getpwuid(getuid())?.pointee.pw_dir {
+                return String(cString: dir)
+            }
         #endif
         return NSHomeDirectory()
     }
@@ -181,9 +182,9 @@ final class AppModel: ObservableObject {
         guard panel.runModal() == .OK, let url = panel.url else { return nil }
         archivePath = url.path
         #if APP_STORE
-        archiveBookmark = try? url.bookmarkData(
-            options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil
-        )
+            archiveBookmark = try? url.bookmarkData(
+                options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil
+            )
         #endif
         return url
     }
@@ -192,24 +193,24 @@ final class AppModel: ObservableObject {
     /// folder; with none yet (first save), ask for one.
     private func archiveFolder() -> URL? {
         #if APP_STORE
-        if let data = archiveBookmark {
-            var stale = false
-            if let url = try? URL(
-                resolvingBookmarkData: data, options: .withSecurityScope,
-                relativeTo: nil, bookmarkDataIsStale: &stale
-            ) {
-                if stale {
-                    archiveBookmark = try? url.bookmarkData(
-                        options: .withSecurityScope, includingResourceValuesForKeys: nil,
-                        relativeTo: nil
-                    )
+            if let data = archiveBookmark {
+                var stale = false
+                if let url = try? URL(
+                    resolvingBookmarkData: data, options: .withSecurityScope,
+                    relativeTo: nil, bookmarkDataIsStale: &stale
+                ) {
+                    if stale {
+                        archiveBookmark = try? url.bookmarkData(
+                            options: .withSecurityScope, includingResourceValuesForKeys: nil,
+                            relativeTo: nil
+                        )
+                    }
+                    return url
                 }
-                return url
             }
-        }
-        return chooseArchiveFolder()
+            return chooseArchiveFolder()
         #else
-        return URL(fileURLWithPath: archivePath)
+            return URL(fileURLWithPath: archivePath)
         #endif
     }
 
@@ -222,7 +223,7 @@ final class AppModel: ObservableObject {
 
     private let iccBackend = ICCBackend()
     #if !APP_STORE
-    private let saneBackend = SANECLIBackend()
+        private let saneBackend = SANECLIBackend()
     #endif
     private let esclBackend = ESCLBackend()
     private let workDir = FileManager.default.temporaryDirectory
@@ -239,7 +240,7 @@ final class AppModel: ObservableObject {
     private func backend(for scanner: ScannerInfo) -> ScannerBackend {
         if scanner.id.hasPrefix("escl:") { return esclBackend }
         #if !APP_STORE
-        if scanner.id.hasPrefix("sane:") { return saneBackend }
+            if scanner.id.hasPrefix("sane:") { return saneBackend }
         #endif
         return iccBackend
     }
@@ -337,11 +338,11 @@ final class AppModel: ObservableObject {
             // Sequential: an ICC browse launches legacy vendor drivers that
             // grab the USB device, which would break a concurrent SANE probe.
             #if APP_STORE
-            // No SANE in the sandboxed build: it needs a bundled helper
-            // with raw USB access, which the App Store doesn't allow.
-            let saneFound: [ScannerInfo] = []
+                // No SANE in the sandboxed build: it needs a bundled helper
+                // with raw USB access, which the App Store doesn't allow.
+                let saneFound: [ScannerInfo] = []
             #else
-            let saneFound = await saneBackend.discover(timeout: 6)
+                let saneFound = await saneBackend.discover(timeout: 6)
             #endif
             let iccFound = await iccBackend.discover(timeout: 6)
 

@@ -1,8 +1,9 @@
 import AppKit
-#if !APP_STORE
-import ScanKit
-#endif
 import SwiftUI
+
+#if !APP_STORE
+    import ScanKit
+#endif
 
 /// Gentle hover feedback — macOS button styles give little or none.
 /// Inert while the control is disabled.
