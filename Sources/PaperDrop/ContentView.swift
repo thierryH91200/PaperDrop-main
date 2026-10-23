@@ -1,5 +1,7 @@
 import AppKit
+#if !APP_STORE
 import ScanKit
+#endif
 import SwiftUI
 
 /// Gentle hover feedback — macOS button styles give little or none.
@@ -222,7 +224,7 @@ struct ContentView: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
                         .foregroundStyle(.secondary)
-                    Button("Choose…") { chooseFolder() }
+                    Button("Choose…") { model.chooseArchiveFolder() }
                 }
             }
             Toggle("OCR", isOn: $model.ocrEnabled)
@@ -357,18 +359,6 @@ struct ContentView: View {
                 .keyboardShortcut(.defaultAction)
         } else {
             button.buttonStyle(.bordered)
-        }
-    }
-
-    /// Pick the archive folder that saved PDFs land in.
-    private func chooseFolder() {
-        let panel = NSOpenPanel()
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.canCreateDirectories = true
-        panel.directoryURL = URL(fileURLWithPath: model.archivePath)
-        if panel.runModal() == .OK, let url = panel.url {
-            model.archivePath = url.path
         }
     }
 

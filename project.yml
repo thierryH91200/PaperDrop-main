@@ -90,6 +90,68 @@ targets:
         script: '"$SRCROOT/scripts/xcode-embed-sane.sh"'
         basedOnDependencyAnalysis: false
 
+  # Mac App Store build: same app, sandboxed. SANE (GPL, bundled helper with
+  # raw USB access) and the IOKit USB reset can't live in the sandbox, so
+  # ScanKit's sources are compiled in directly without them and the app code
+  # drops its SANE paths under APP_STORE. Scanners come from ImageCaptureCore
+  # and eSCL/AirScan only. The Developer ID target above is unchanged.
+  PaperDropAppStore:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources/PaperDrop
+      - path: Sources/ScanKit
+        excludes:
+          - SANECLIBackend.swift
+          - USBReset.swift
+      - path: icon/PaperDrop.icns
+        buildPhase: resources
+    dependencies:
+      - sdk: Vision.framework
+    settings:
+      base:
+        PRODUCT_NAME: PaperDropAppStore
+        # Replace with the bundle ID registered in App Store Connect.
+        PRODUCT_BUNDLE_IDENTIFIER: com.bensquire.paperdrop.appstore
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) APP_STORE"
+        ENABLE_APP_SANDBOX: "YES"
+        ENABLE_HARDENED_RUNTIME: "YES"
+        # Ad-hoc locally like the other targets; for the App Store archive
+        # set CODE_SIGN_STYLE=Automatic and DEVELOPMENT_TEAM=<team id>.
+    entitlements:
+      path: PaperDrop/PaperDropAppStore.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        # eSCL/AirScan over HTTP(S) + ImageCaptureCore network scanners.
+        com.apple.security.network.client: true
+        # USB scanners driven by ImageCaptureCore.
+        com.apple.security.device.usb: true
+        # Archive folder picked in an open panel, kept via a bookmark.
+        com.apple.security.files.user-selected.read-write: true
+        com.apple.security.files.bookmarks.app-scope: true
+    info:
+      path: PaperDrop/Info-AppStore.plist
+      properties:
+        CFBundleName: PaperDrop
+        CFBundleDisplayName: PaperDrop
+        CFBundleExecutable: PaperDropAppStore
+        CFBundleIdentifier: "$(PRODUCT_BUNDLE_IDENTIFIER)"
+        CFBundleIconFile: PaperDrop
+        CFBundlePackageType: APPL
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        LSMinimumSystemVersion: "13.0"
+        LSApplicationCategoryType: public.app-category.productivity
+        ITSAppUsesNonExemptEncryption: false
+        NSHighResolutionCapable: true
+        NSLocalNetworkUsageDescription:
+          PaperDrop connects to scanners on your local network to scan documents.
+        NSBonjourServices:
+          - _scanner._tcp
+          - _uscan._tcp
+          - _uscans._tcp
+          - _pdl-datastream._tcp
+
   # Headless CLI (same ScanKit pipeline, no UI). Kept from the SwiftPM setup.
   scantool:
     type: tool
@@ -136,3 +198,9 @@ schemes:
     test:
       targets:
         - ScanKitTests
+  PaperDropAppStore:
+    build:
+      targets:
+        PaperDropAppStore: all
+    run:
+      config: Debug

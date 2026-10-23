@@ -1,4 +1,8 @@
+// The App Store target compiles ScanKit's sources directly (minus SANE and
+// USB reset), so there is no separate module to import.
+#if !APP_STORE
 import ScanKit
+#endif
 import SwiftUI
 
 struct PageItem: Identifiable {
@@ -145,7 +149,69 @@ final class AppModel: ObservableObject {
     }
 
     @AppStorage("archivePath") var archivePath =
-        NSHomeDirectory() + "/Documents/Scans"
+        AppModel.userHome + "/Documents/Scans"
+
+    #if APP_STORE
+    /// Security-scoped bookmark to the archive folder. A sandboxed app may
+    /// only write where the user pointed it, and only keeps that right
+    /// across launches through this bookmark.
+    @AppStorage("archiveBookmark") var archiveBookmark: Data?
+    #endif
+
+    /// The real home folder. Inside the sandbox NSHomeDirectory() is the
+    /// app's container, which users never look in.
+    private static var userHome: String {
+        #if APP_STORE
+        if let dir = getpwuid(getuid())?.pointee.pw_dir {
+            return String(cString: dir)
+        }
+        #endif
+        return NSHomeDirectory()
+    }
+
+    /// Let the user pick the archive folder that saved PDFs land in.
+    /// Returns the folder, or nil if they cancelled.
+    @discardableResult
+    func chooseArchiveFolder() -> URL? {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        panel.directoryURL = URL(fileURLWithPath: archivePath)
+        guard panel.runModal() == .OK, let url = panel.url else { return nil }
+        archivePath = url.path
+        #if APP_STORE
+        archiveBookmark = try? url.bookmarkData(
+            options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil
+        )
+        #endif
+        return url
+    }
+
+    /// The folder to save into. In the sandbox that is the bookmarked
+    /// folder; with none yet (first save), ask for one.
+    private func archiveFolder() -> URL? {
+        #if APP_STORE
+        if let data = archiveBookmark {
+            var stale = false
+            if let url = try? URL(
+                resolvingBookmarkData: data, options: .withSecurityScope,
+                relativeTo: nil, bookmarkDataIsStale: &stale
+            ) {
+                if stale {
+                    archiveBookmark = try? url.bookmarkData(
+                        options: .withSecurityScope, includingResourceValuesForKeys: nil,
+                        relativeTo: nil
+                    )
+                }
+                return url
+            }
+        }
+        return chooseArchiveFolder()
+        #else
+        return URL(fileURLWithPath: archivePath)
+        #endif
+    }
 
     /// The resolutions offered in the menu: the selected scanner's real list
     /// when known (so a WF-3820 shows 100/200/300/600/1200, not phantom
@@ -155,7 +221,9 @@ final class AppModel: ObservableObject {
     }
 
     private let iccBackend = ICCBackend()
+    #if !APP_STORE
     private let saneBackend = SANECLIBackend()
+    #endif
     private let esclBackend = ESCLBackend()
     private let workDir = FileManager.default.temporaryDirectory
         .appendingPathComponent("PaperDrop", isDirectory: true)
@@ -170,7 +238,10 @@ final class AppModel: ObservableObject {
 
     private func backend(for scanner: ScannerInfo) -> ScannerBackend {
         if scanner.id.hasPrefix("escl:") { return esclBackend }
-        return scanner.id.hasPrefix("sane:") ? saneBackend : iccBackend
+        #if !APP_STORE
+        if scanner.id.hasPrefix("sane:") { return saneBackend }
+        #endif
+        return iccBackend
     }
 
     // MARK: Adjustable preview
@@ -265,7 +336,13 @@ final class AppModel: ObservableObject {
             let esclFound = await esclBackend.discover(timeout: 6)
             // Sequential: an ICC browse launches legacy vendor drivers that
             // grab the USB device, which would break a concurrent SANE probe.
+            #if APP_STORE
+            // No SANE in the sandboxed build: it needs a bundled helper
+            // with raw USB access, which the App Store doesn't allow.
+            let saneFound: [ScannerInfo] = []
+            #else
             let saneFound = await saneBackend.discover(timeout: 6)
+            #endif
             let iccFound = await iccBackend.discover(timeout: 6)
 
             // The same device often appears via several backends with
@@ -530,7 +607,7 @@ final class AppModel: ObservableObject {
     func savePDF() {
         // Finish a duplex capture by interleaving the two passes first.
         if duplexReadyToMerge { duplexMerge() }
-        guard !pages.isEmpty, !busy else { return }
+        guard !pages.isEmpty, !busy, let dir = archiveFolder() else { return }
         saving = true
         errorText = nil
         let ocr = ocrEnabled
@@ -542,12 +619,14 @@ final class AppModel: ObservableObject {
         let baseName = nameFormat.base(counter: nameCounterNext)
         let usedCounter = nameUseCounter
         let overwrite = nameOverwrite
-        let dir = URL(fileURLWithPath: archivePath)
         let builders = pages.map(\.build)
 
         let uniform = uniformPages
         Task.detached { [weak self] in
             guard let self else { return }
+            // No-op outside the sandbox (plain file URL returns false).
+            let scoped = dir.startAccessingSecurityScopedResource()
+            defer { if scoped { dir.stopAccessingSecurityScopedResource() } }
             do {
                 var pdfPages: [PDFWriter.Page] = []
                 for build in builders {
