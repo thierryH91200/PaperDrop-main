@@ -26,6 +26,8 @@ cp Vendor/sane/lib/sane/*.so "$CONTENTS/Frameworks/sane/"
 cp -R Vendor/sane/etc/sane.d "$CONTENTS/Resources/"
 cp -R Vendor/sane/licenses "$CONTENTS/Resources/"
 cp Vendor/sane/VERSION "$CONTENTS/Resources/licenses/SANE-VERSION"
+# PaperDrop itself is MIT-licensed: its copyright notice must ship with the app.
+cp LICENSE "$CONTENTS/Resources/licenses/PaperDrop-LICENSE"
 
 # EXPANDED_CODE_SIGN_IDENTITY is the resolved identity hash, or "-" for ad-hoc.
 IDENTITY="${EXPANDED_CODE_SIGN_IDENTITY:-${CODE_SIGN_IDENTITY:--}}"

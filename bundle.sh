@@ -15,12 +15,27 @@ set -e
 cd "$(dirname "$0")"
 
 VERSION="${VERSION:-0.1.0}"
-IDENTITY="${CODESIGN_IDENTITY:-Developer ID Application: BENJAMIN RICHARD SOUIRE (SZHK3JVH6J)}"
+IDENTITY="${CODESIGN_IDENTITY:-Developer ID Application: thierry hentic (Y3XMZAK2SQ)}"
 
-command -v xcodegen >/dev/null || { echo "brew install xcodegen first" >&2; exit 1; }
-xcodegen generate
+if command -v xcodegen >/dev/null; then
+    xcodegen generate
+elif [[ ! -d PaperDrop.xcodeproj ]]; then
+    echo "brew install xcodegen first" >&2; exit 1
+else
+    echo "xcodegen not found: using the existing PaperDrop.xcodeproj"
+fi
+
+# Developer ID builds must be notarizable: secure timestamp and no
+# get-task-allow (Xcode injects it unless told not to).
+SIGN_FLAGS=()
+if [[ "$IDENTITY" != "-" ]]; then
+    SIGN_FLAGS=(CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO OTHER_CODE_SIGN_FLAGS=--timestamp)
+fi
 
 DERIVED=.build/xcode
+# Start from a fresh .app so Xcode always re-signs it (an incremental build
+# can skip CodeSign while the embed phase still adds files).
+rm -rf "$DERIVED/Build/Products/Release/PaperDrop.app"
 xcodebuild \
     -project PaperDrop.xcodeproj \
     -scheme PaperDrop \
@@ -29,6 +44,7 @@ xcodebuild \
     MARKETING_VERSION="$VERSION" \
     CODE_SIGN_IDENTITY="$IDENTITY" \
     OTHER_SWIFT_FLAGS='-Osize' \
+    "${SIGN_FLAGS[@]}" \
     build
 
 rm -rf PaperDrop.app

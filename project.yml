@@ -54,7 +54,7 @@ targets:
     settings:
       base:
         PRODUCT_NAME: PaperDrop
-        PRODUCT_BUNDLE_IDENTIFIER: com.bensquire.paperdrop
+        PRODUCT_BUNDLE_IDENTIFIER: com.thierryhentic.paperdrop
         # Runs a bundled scanimage helper + touches IOKit/USB — must NOT be
         # sandboxed. Hardened runtime is required for notarization.
         ENABLE_APP_SANDBOX: "NO"
@@ -65,7 +65,7 @@ targets:
       properties:
         CFBundleName: PaperDrop
         CFBundleExecutable: PaperDrop
-        CFBundleIdentifier: com.bensquire.paperdrop
+        CFBundleIdentifier: "$(PRODUCT_BUNDLE_IDENTIFIER)"
         CFBundleIconFile: PaperDrop
         CFBundlePackageType: APPL
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
