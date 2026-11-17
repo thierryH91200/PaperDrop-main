@@ -303,13 +303,14 @@ struct ContentView: View {
                 Text(fronts ? "Scan the fronts" : "Now scan the backs")
                     .fontWeight(.medium)
                 Text(verbatim: "·").foregroundStyle(.secondary)
-                Text(
-                    fronts
-                        ? "Load the stack in the feeder."
-                        : "Flip the stack, scan, then Save PDF."
-                )
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
+                duplexGuidance(fronts: fronts)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    // The merge reverses the backs (stack flipped in one go),
+                    // so on the flatbed they must go last sheet first.
+                    .help(
+                        "On the flatbed, scan the backs starting with the last sheet: PaperDrop reverses their order when saving."
+                    )
             }
             Spacer(minLength: 0)
             if duplex {
@@ -322,6 +323,20 @@ struct ContentView: View {
         .background {
             if duplex { Color.accentColor.opacity(0.10) }
         }
+    }
+
+    /// Second half of the duplex banner. On the flatbed the backs must be
+    /// scanned last sheet first, since `duplexMerge` reverses them.
+    private func duplexGuidance(fronts: Bool) -> Text {
+        let flatbed = model.scanSource == .flatbed
+        if fronts {
+            return flatbed
+                ? Text("One sheet at a time, in order.")
+                : Text("Load the stack in the feeder.")
+        }
+        return flatbed
+            ? Text("Start with the last sheet, then Save PDF.")
+            : Text("Flip the stack, scan, then Save PDF.")
     }
 
     /// Recto / Verso scan buttons — in duplex they replace the generic scan
