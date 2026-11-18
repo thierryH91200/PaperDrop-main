@@ -106,6 +106,10 @@ targets:
           - USBReset.swift
       - path: icon/PaperDrop.icns
         buildPhase: resources
+      # Declares the UserDefaults access (reason CA92.1) and no tracking or
+      # data collection.
+      - path: AppStore/PrivacyInfo.xcprivacy
+        buildPhase: resources
     dependencies:
       - sdk: Vision.framework
     settings:
@@ -116,8 +120,12 @@ targets:
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) APP_STORE"
         ENABLE_APP_SANDBOX: "YES"
         ENABLE_HARDENED_RUNTIME: "YES"
-        # Ad-hoc locally like the other targets; for the App Store archive
-        # set CODE_SIGN_STYLE=Automatic and DEVELOPMENT_TEAM=<team id>.
+        # Xcode-managed signing: Apple Development for local runs, Apple
+        # Distribution + an App Store profile on export (see
+        # AppStore/ExportOptions.plist and `make appstore`).
+        CODE_SIGN_STYLE: Automatic
+        CODE_SIGN_IDENTITY: "Apple Development"
+        DEVELOPMENT_TEAM: Y3XMZAK2SQ
     entitlements:
       path: PaperDrop/PaperDropAppStore.entitlements
       properties:

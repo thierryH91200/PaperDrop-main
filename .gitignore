@@ -10,3 +10,5 @@ PaperDrop.xcodeproj/
 # XcodeGen writes the app Info.plist into the top-level PaperDrop/ dir only.
 # Anchored to the repo root so it does NOT match Sources/PaperDrop/.
 /PaperDrop/
+# `make appstore` archives and exports here.
+/build/
