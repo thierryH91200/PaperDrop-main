@@ -623,6 +623,17 @@
         }
       }
     },
+    "On the flatbed, scan the backs starting with the last sheet: PaperDrop reverses their order when saving." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sur la vitre, numérisez les versos en commençant par la dernière feuille : PaperDrop inverse leur ordre à l'enregistrement."
+          }
+        }
+      }
+    },
     "Orientation" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -945,6 +956,17 @@
         }
       }
     },
+    "Start with the last sheet, then Save PDF." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Commencez par la dernière feuille, puis Enregistrer le PDF."
+          }
+        }
+      }
+    },
     "Scan the fronts" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -952,6 +974,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Numérisez les rectos"
+          }
+        }
+      }
+    },
+    "One sheet at a time, in order." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Une feuille à la fois, dans l'ordre."
           }
         }
       }
